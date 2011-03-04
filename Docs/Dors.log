@@ -1,4 +1,4 @@
-This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6) (format=latex 2011.1.5)  2 MAR 2011 19:01
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6) (format=latex 2011.1.5)  4 MAR 2011 16:41
 entering extended mode
  %&-line parsing enabled.
 **Dors
@@ -50,18 +50,19 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <7> on input line 23.
  [1
 
-] [2] (./Dors.bbl) [3] (./Dors.aux) )
+] [2] [3]
+(./Dors.bbl) [4] (./Dors.aux) )
 (\end occurred inside a group at level 1)
 
 ### simple group (level 1) entered at line 55 ({)
 ### bottom level 
 Here is how much of TeX's memory you used:
- 232 strings out of 256217
- 2437 string characters out of 1917096
+ 233 strings out of 256217
+ 2452 string characters out of 1917096
  51804 words of memory out of 1500000
- 3595 multiletter control sequences out of 10000+200000
- 7273 words of font info for 26 fonts, out of 1200000 for 2000
+ 3596 multiletter control sequences out of 10000+200000
+ 7442 words of font info for 27 fonts, out of 1200000 for 2000
  645 hyphenation exceptions out of 8191
- 22i,6n,19p,150b,230s stack positions out of 5000i,500n,6000p,200000b,15000s
+ 22i,6n,19p,150b,265s stack positions out of 5000i,500n,6000p,200000b,15000s
 
-Output written on Dors.dvi (3 pages, 10760 bytes).
+Output written on Dors.dvi (4 pages, 12220 bytes).
