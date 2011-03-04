@@ -1,0 +1,144 @@
+\documentclass[12pt]{article}
+\setlength{\textheight}{9.80in}
+\setlength{\textwidth}{6.40in}
+\setlength{\oddsidemargin}{0.0mm}
+\setlength{\evensidemargin}{1.0mm}
+\setlength{\topmargin}{-0.6in}
+\setlength{\parindent}{0.2in}
+\setlength{\parskip}{1.5ex}
+\newtheorem{defn}{Definition}
+\renewcommand{\baselinestretch}{1.2}
+
+\begin{document}
+
+\bibliographystyle{prsty}
+
+\thispagestyle{empty}
+
+\title{ The {\it DORS}: a Discrete Ordinates Radiation Simulator}
+
+\author{C. Godsalve \\
+email:{\tt seagods@hotmail.com} }
+
+\maketitle
+
+\section{After the Download}
+
+
+Without going into any details, the {\it DORS} is primarily intended as a simulator
+for ultra-violet, visible, and infrared radiation in the Earth's atmosphere. It consists
+of three separate stages, {\it Dors1}, {\it Dors2}, and {\it Dors3}. {\it Dors1} sets up the
+details of the atmosphere, {\it Dors2} sets up the boundary condition at the ground, and
+{\it Dors3} actually does the radiative transfer calculations based on the output of {\it Dors1} and {\it Dors2}.
+All the details of what these codes do are contained in three separate documents: here we only 
+tell what to do once you have downloaded a copy of the {\it DORS}. I have written this document
+ bearing in mind that the {\it DORS} may be used by undergraduate students or first
+year postgraduate students that don't yet have a lot of experience in computing. Because of this, I have 
+included a lot of very basic information.
+
+I shall suppose you have downloaded the {\it DORS} from my pages at {\it GitHub}, and you use the default directory name
+of ``Dors". This contains the source code of the computer programs that
+I have written: these need to be compiled together with additional programmes.
+It also contains various data directories.
+ So, the {\it DORS} has some dependencies, and this document is here to tell you
+where to get the things that the {\it DORS} depends on. With these, you can get the thing up and running.
+The {\it DORS} was developed to run on a PC running Linux, so getting the programs compiled
+will be just as easy on a UNIX system. Many of  dependencies are  various bits of freely
+available mathematical software which we shall give details of below. Apart from mathematical
+software, the {\it DORS}
+ depends on the {\it HITRAN}
+molecular database \cite{RothmanETAL:Mybib}.
+
+ In order to get started, there is a only a moderate
+amount of work to do on a Linux or UNIX system. Whatever the operating system, you will need a C++ compiler.
+The {\it Gnu Compiler Collection} (gcc) includes C++, and is  completely free. It requires a {\it POSIX} compliant system.
+Linux and Mac OSX are {POSIX compliant, and most Linux distributions come with gcc. 
+
+ So what if you have
+a PC running MS Windows? 
+If this is the
+case you won't automatically have a compiler available. (At the time of writing Microsoft visual C++ 2010 is
+ downloadable for free.) Unfortunately, as it stands with the Dors, gcc is essential because of the need to
+call FORTRAN functions from C++ via ``gfortran" which also comes with the gcc. To use gcc it you need 
+to get over the {\it POSIX} stumbling block. 
+You have one of two options: download and install {\it Cygwin}, or download a Linux ``flavor" or ``distro" 
+ such as Fedora, OpenSuSe, Ubuntu, or Mandriva. There are many such ``flavors". It {\it should} be easy to make
+your machine ``dual boot", so you can choose to run MS Windows or Linux when you restart.
+If you  really don't want a dual boot machine you need to use {\it Cygwin} option. (Just use google or some other search engine
+to find {\it Cygwin}.) At any rate, none of this should cost you a penny, and obviously {\it back up all
+your data } if you go for dual boot! 
+
+
+So if you are an MS Windows user  and you choose to install Linux, you should have the necessary compilers
+with the distribution. If you
+go for {\it Cygwin}, all
+you need to do is (for free) download and install gcc.
+If you search on gcc, you shall soon find it. Make sure that gfortran gets installed
+along with g++. 
+Either way, to make the transition to Linux, all you need to do is to pop into a library and borrow a basic book on Linux
+ or UNIX, or just type UNIX, Linux, along with  ``tutorial" into a search engine.
+
+
+Now, once you are in the command line (thats right --- no fancy
+ windows style point and click) and in the Dors directory type ``compile". You get a whole bunch of
+error messages! Why? Well first there is that other mathematical software you need (its all free) 
+and then there is the {\it HITRAN} molecular database. We shall list the
+freely downloadable routines and where to get them at the end of this document,
+and go on to {\it HITRAN}.
+
+\section{What You Need from {\it HITRAN}}
+
+
+The {\it DORS} uses the 
+{\it HITRAN} \cite{RothmanETAL:Mybib} molecular database to calculate molecular absorption of radiation.
+Molecular absorption is important for nearly all Earth
+atmosphere purposes, so {\it HITRAN} is needed. The {\it Dors} directory has an empty directory
+named {\it HITRAN}.
+ Again, just use a search engine, and the {\it HITRAN} home page
+should be there. You will need to fill in an online request form, and it may take a while for
+you to receive an email telling you how to download it. It it is quite likely that you might want to 
+download {\it HITRAN} as a stand alone data base. If so, download all the necessary files
+and documentation and keep it entirely separate from the {\it DORS}, then copy what is
+necessary to the ``Dors/HITRAN" directory.
+
+I shall suppose you use have {\it ftp} available. If not, there are instructions for downloading
+using other methods. Back to {\it ftp}: I suppose you have received
+ the ftp address via email and have typed {\it ftp whatever\_address} 
+at the command line and are now 
+at the login prompt. 
+For the user name, you just type ``anonymous", and {\it please} use your {\it real}
+ email address as the password. If you haven't used ftp before, just type ``help" at the ftp prompt.
+This gives you a list of {\it ftp} commands. 
+You shall see ``cd", ``dir", and ``mget" in the list, just do ``help mget" for instance, and you are told
+what ``mget" does.  If you normaly use MS Windows, note 
+that {\it everything} in ftp, Linux,  and Cygwin is case sensitive. 
+For instance, ftp will recognise 	``cd DirName" for ``change directory to
+ DirName", but
+will give you an error if you type ``CD DirName" or ``cd DIRNAME" instead. 
+
+Change directory to pub/HITRAN2008. If you type ``ls" you get a list of what's in the
+current directory.  You will see things on the left looking like ``-rw-r--r--r" to the left of each list
+item. If that starts with the letter `d', then it's a directory. Change directory to
+``Global\_Data".
+The ``pwd" command tells you what directory you are in at any time.
+ For directory names and files that have spaces, you need to put a double quote at the start and end of
+the directory name. 
+
+Your {\it Dors} directory will have an empty directory called ``HITRAN". This is for the data, {\it don't} put 
+what you anything you might have  just downloaded here. You will encounter  some {\it pdf} files that
+ give you a list of references to quote
+for any publications you make using {\it HITRAN}. Naturally, use these for any publications you make
+using the output of the {\it DORS}. Now, you might want to download absolutely everything, after all you get
+things like {\it JavaHAWKS} and copies of papers describing {\it HITRAN}. I shall only mention what you need
+to download to get the {\it DORS} running. Go back to ``Global\_Data" and download ``molparam.txt".
+This goes in your empty ``HITRAN" directory.  Now go back to ``/pub/HITRAN2008". This has a subdirectory,
+also called ``HITRAN2008", go there, and then to ``By-Molecule", download the pdf, and then
+go to ``Compressed-files". Download everything here, put them in your ``HITRAN" directory and
+unzip them. You now have a lot of files with names like ``01-hit08.par". That is the archive file
+for molecule 1 in {\it HITRAN 2008}. Two files have an extra ``\_f53"
+in the names. Just edit this out of the names.
+
+
+\bibliography{/home/daddio/Articles/Mybib}
+\end{document}
+
