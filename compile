@@ -1,4 +1,5 @@
 g++ -c -g Questioner.cpp
 g++ -c -g WaterVap.cpp 
 g++ -c -g Dors1.cpp 
-g++ -g -o Dors1 Dors1.o Questioner.o WaterVap.o  $HOME/libs/libtoms.a $HOME/libs/mylib.a $HOME/libs/libslatec.a  -lgfortran
+g++ -g -o Dors1 Dors1.o Questioner.o WaterVap.o -lgfortran  -ldors
+rm *.o

@@ -25,18 +25,27 @@ email:{\tt seagods@hotmail.com} }
 \section{After the Download}
 
 
-Without going into any details, the {\it DORS} is primarily intended as a simulator
+Without going into any details, the {\it The-DORS} is primarily intended as a simulator
 for ultra-violet, visible, and infrared radiation in the Earth's atmosphere. It consists
 of three separate stages, {\it Dors1}, {\it Dors2}, and {\it Dors3}. {\it Dors1} sets up the
 details of the atmosphere, {\it Dors2} sets up the boundary condition at the ground, and
 {\it Dors3} actually does the radiative transfer calculations based on the output of {\it Dors1} and {\it Dors2}.
 All the details of what these codes do are contained in three separate documents: here we only 
-tell what to do once you have downloaded a copy of the {\it DORS}. I have written this document
- bearing in mind that the {\it DORS} may be used by undergraduate students or first
+tell what to do once you have downloaded a copy of the {\it The-DORS}. I have written this document
+ bearing in mind that the {\it The-DORS} may be used by undergraduate students or first
 year postgraduate students that don't yet have a lot of experience in computing. Because of this, I have 
 included a lot of very basic information.
 
-I shall suppose you have downloaded the {\it DORS} from my pages at {\it GitHub}, and you use the default directory name
+If you have not obtained this document by downloading the {\it The-Dors}, you may obtain the code, data, and documentation
+by typing
+\begin{verbatim}
+git clone git@github.com:seagods/The-DORS.git[ENTER]
+\end{verbatim} 
+at a terminal. This requires a program called 
+{\it Git-Fast version control system},
+ which may be obtained from ``http://git-scm.com".
+
+I shall suppose you have downloaded the {\it The-DORS} from {\it GitHub}, and you use the default directory name
 of ``The-DORS". This contains the source code of the computer programs that
 I have written: these need to be compiled together with additional programmes.
 It also contains various data directories.
@@ -156,9 +165,34 @@ mv SPECIES_2002.CMN Species_2002.cmn
 gfortran -o TIPS TIPS_2009.for
 gfortran -c TIPS_2009.for
 \end{verbatim}
-The main program is called {\it TIPS\_2009}, and you now have a stand alone executable file called {\it TIPS}, and 
-an object file called {\it TIPS\_2009.o} which can be linked in with {\it Dors1}. (The other programs are incorporated
- via {\it include} statements.
+The example driver program is called {\it TIPS\_2009}, and you now have a stand alone executable file called {\it TIPS} which you can test. The rest of the 
+programs files will go into the {\it Dors library}.
+
+
+\section{Library Programs - Building the Dors Library}
+
+As well as these {\it FORTRAN} programs, ``The-Dors" requires various mathematical programs which we shall combine into a library. The good news is
+that they are all free, copyright free, and patent free. You can distribute freely (as long as you don't say you wrote
+ them and so on. If you do distribute them - say where they are from!  However, I have chosen {\it not} to distribute
+them with ``The-DORS" (The reason is I don't have the space in my {\it github} account to distribute
+them from there.  Instead, ``The-DORS" file contains a subdirectory called  {\it dorslibs}.
+This contains a plain text file called {\it Instructions.txt}. It tells you what to do if you put your {\it The-Dors}
+directory in your home directory. You will have to make your own adjustments if you put it elsewhere.
+
+That is, it tells you all the maths library routines you need to download, and where to download them from. 
+(I may put them all on {\it zSHARE} so you can download them all as a gzipped tarfile. They take up
+too much space for to put them on a free github account).
+As well as this
+there are two scripts that will build them all into a single library archive by running {\it script1} and then {\it script2}
+and finishing off the instructions in the {\it Instructions.txt} file.
+Note that this library will contain the {\it HITRAN} subroutines and functions that you downloaded, and is linked
+ with {\it -lDors} at the compilation stage.
+
+ In your {\it The-DORS} directory there 
+is a script {\it compile} that compiles ``The-DORS". (Make sure your compile script is executable by doing ``chmod u+x compile"
+at the command line.) Do likewise for the scripts in your {\it dorslib} director.
+
+
 
 
 

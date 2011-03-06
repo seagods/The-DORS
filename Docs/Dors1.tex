@@ -66,7 +66,7 @@ Once you have edited {\it Dors1in.dat}
 atmosphere. If you have a different name for the input file, say {\it Dors1inX.dat}, just type
 ``{\it Dors1 Dors1inX.dat}" instead. 
 
-The following descriptions of the various options are rather turgid, but will be handy to have alongside
+The following descriptions of the various options are rather dull, but will be handy to have alongside
 you when you run the programme. I have posted some online videos which should be a lot easier to
 follow on first using Dors1 \footnote[2]{Youtube video not yet done}.
 
@@ -102,7 +102,7 @@ So, let us have a ``run through" of {\it Dors1} -v. Recall that the  first quest
 whether you want an Earth
 atmosphere or some other, perhaps arbitrary, atmosphere. We have entered the number one to select
 an Earth atmosphere. The next question concerns how we are to enter the amount of tropospheric
-and boundary aerosol. We are asked whether we want to enter optical depths or a visibilities.
+and boundary aerosol. We are asked whether we want to enter optical depths or visibilities.
 
 If we have estimates of the optical depths of the upper
 troposphere and the boundary layer then we can choose the option to enter these optical depths.
@@ -164,11 +164,11 @@ too small for the given response function.
 
 Note that this use of splines excludes response functions with sharp discontinuities in the first 
 derivative w.r.t. wavelength.  A triangular form, for instance, should be split up into two separate 
-problems, and then combined at the end. (No real instrument has a truly triangular form, putting in
+problems for {\it Dors1}, and then combined at the end. (No real instrument has a truly triangular form, putting in
  a few extra points 
 around the sharply curved peak of a response function that is almost triangular is a good idea.)
 
- There must be at least two wavelengths between $\lambda_1$ and $\lambda_2$.
+ There must be at least two wavelengths between $\lambda_1$ and $\lambda_2$ (unless they are equal).
 The response function should integrate to unity
 between the two specified wavelengths. (It shall be normalised within {\it Dors1} if
 it doesn't integrate to unity, and a warning will be output, this might indicate that the number
@@ -209,7 +209,7 @@ There are  6 pre-defined atmospheres,  and the possibility of having a ``user de
 The six pre-defined atmospheres numbered 1 to 6 respectively, are tropical, mid latitude Spring/Summer and Autumnn/Winter, and 
 sub-Arctic Spring/Summer or Autumn/Winter, and finally
 the U. S. 1976 standard atmosphere. 
-Atmosphere numbers 1, 6, and 7 are tropical, standard, and user defined and are independent of season.
+Atmosphere numbers 1, 6, and 7 are tropical, standard, and user defined, and these are independent of season.
 
 Now, if we do not use tropical, standard, or user defined, the tropospheric 
 and stratospheric aerosol models are 
@@ -260,12 +260,13 @@ Other things that may vary are the height of the ground, the thickness of the bo
 use the default heights or enter your own. For now select the default.
 
 The last things that we are prompted for is the orders of the two separate gauss quadrature rules.
-The first is the usuall Gauss-Legendre rule that calculates integrations in height in each sub-layer of each
+The first is the usual Gauss-Legendre rule that calculates integrations in height in each sub-layer of each
 aerosol region. The other one is for the Gauss-Hermite rule for integrations over the Voigt profiles
 of the absorption lines.
- these are two more another things that you need to experment with. For now, just choose 4 and 16.
+ these are two other things that you need to experment with. For now, just choose 4 and 16.
 
-We have now finished, we have a record in {\it Dors1in.dat}. Look at the following example.
+We have now finished the input for {\it Dors1}, and  we have a record of the input in
+ {\it Dors1in.dat}. Look at the following example.
 \begin{verbatim}
 1 
 1 45.000000 26.000000
@@ -280,7 +281,7 @@ We have now finished, we have a record in {\it Dors1in.dat}. Look at the followi
 4   16 
 \end{verbatim}
 In the first line, we have chosen an Earth atmosphere. Then we see we have chosen
-to enter visibilities and chosen a tropospheric visibility of 45km and a boundary layer visibilty
+to enter visibilities,  and have chosen a tropospheric visibility of 45km and a boundary layer visibilty
 of 26km. Our start wavelength is 0.5$\mu m$ and our stop wevaelength is $0.6 \mu m$. The
 upper atmosphere is just 1 slab. The stratosphere is split into two slabs, the upper
 troposphere is split into three slabs and the boundary layer is split into four. I remind
@@ -295,10 +296,10 @@ On the next line we see the numbers 13, 6, 3, 1, 0.
 The value of 13 shows we have a normal upper atmosphere. Other values might be 14 for ``transition
 from volcanic to normal", 15 for transition from volcanic to extreme volcanic", and 16 for
  extreme volcanic. Then the value of 6 means we have chosen ``Background volcanic Spring/Summer".
-We could have chosen 8, 10, or 12 for ``Moderate volcanic", ``High Volcanic", or "Extreme volcanic".
+We could have chosen 8, 10, or 12 for ``Moderate volcanic", ``High Volcanic", or ``Extreme volcanic".
 If we had chosen Autumn/Winter, the corresponding option numbers would have been 5, 7, 9, and 11.
 
-When run in verbose mode, there is no input number for the tropospherical aerosol type. 
+When run in verbose mode, there is no input number for the tropospheric aerosol type. 
 The troposphere type number is set
 internally and will be 
 be 3 for Spring/Summer and 1 for Autumn/Winter. In non verbose mode it must be set by the input file.
@@ -310,8 +311,14 @@ been prompted for which of the two this was. A number has to be there regardless
 we choose for the boundary layer. If we choose 3 for the boundary layer option, this last number is
 either 1 for open Ocean, or 0 for Maritime.
 
-The next line indicates that we have chosen 1 and shall use the default water vapour profiles, and 0 
- to indicate we have no information  on either temperature or pressure. 
+Note that there is no mention of what choice we have made for the season. When run in non-verbose mode
+ {\it Dors1} needs no such information. It is only in verbose mode that it asks for the season, and that
+ information only determines later prompts.
+
+The next line indicates that we have chosen 1 when prompted as to whether or not
+the default water vapour prifiles, and so shall use the default water vapour profiles. We chose 0 
+when asked if we had pressure or temperature data.
+ This indicates that  we have no information  on either temperature or pressure. 
 On the same line as these options (1 and 0) 
 are two (silly) numbers for
 temperature and pressure. These have to be there regardless, even though we have no information
@@ -1045,6 +1052,8 @@ large error in extinction coefficient as a function of wavelength.
 \caption{Long wavelength values of the complex refractive index of the large rural aerosol mode at high humidity}
 \end{table}
 \end{center}
+
+\newpage
 
 \bibliography{/home/daddio/Articles/Mybib}
 %\newpage
