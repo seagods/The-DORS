@@ -1,0 +1,60 @@
+1.  Go to http://netlib.org/liblist.html
+2.  go to toms
+3.  Download 125 (WEIGHTCOEFF) and unpack it (test it with 655 of you like!).
+    and name the file. (See betlib/toms/index.)
+
+    weightcoeff.f
+
+
+4.  Go back to http://netlib.org/liblist.html
+5.  Click on slatec
+
+    (Note:1 d1mach and i1mach relate to machine precision and are therefore
+    machine dependent. They have machine constants for a range of
+    machines and you just uncomment the lines relating to
+    the machine you intend to run the program on: naturally you must
+    do the edits before running the scripts, or if you forget, do 
+    the edits afterwards and re-run the scripts.)
+
+    (Note:2 If you already have slatex installed, this won't do any harm, but what you cannot do
+    is compile with -lslatec -ldors. If you want to use other slatec programs and compile
+    with -ldors, don't download any of these, and strip out all the slatec routines in script1
+    and script2. The same goes for any other libraries which you may have installed [including toms as above].)
+
+    Download
+
+    dbint4.f
+    dbspvd.f
+    dbnfac.f
+    dbnslv.f
+    dbvalu.f
+    dbspvn.f
+    dintrv.f
+    d1mach.f
+    i1mach.f
+    fdump.f
+    j4save.f
+    xermesg.f
+    xerprn.f
+    xersve.f
+    xerhlt.f
+    xercnt.f 
+    xgetua.f
+
+.  Move all the fortran and cmn you downloaded from {\it HITRAN-2008}
+    here (except TIPS_2009.for}
+
+. run script1
+  run script2
+
+. su to root (get a systems manager to do this if you don't have the root password
+
+. copy libdors.so.0.0 to /usr/local/lib
+
+. cd /usr/local/lib
+. ln -s libdors.so.0.0 libdors.so
+. ln -s libdors.so.0.0 libdors.so.0
+. ldconfig -n /usr/local/lib
+
+
+

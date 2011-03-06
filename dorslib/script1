@@ -1,0 +1,23 @@
+gfortran -fPIC -g -c -Wall  weightcoeff.f
+gfortran -fPIC -g -c -Wall  dbint4.f
+gfortran -fPIC -g -c -Wall  dbnfac.f
+gfortran -fPIC -g -c -Wall  dbspvd.f
+gfortran -fPIC -g -c -Wall  dbnslv.f
+gfortran -fPIC -g -c -Wall  dbvalu.f
+gfortran -fPIC -g -c -Wall  dbspvn.f
+gfortran -fPIC -g -c -Wall  dintrv.f
+gfortran -fPIC -g -c -Wall  dbspvn.f
+gfortran -fPIC -g -c -Wall  d1mach.f
+gfortran -fPIC -g -c -Wall  fdump.f
+gfortran -fPIC -g -c -Wall  i1mach.f
+gfortran -fPIC -g -c -Wall  j4save.f
+gfortran -fPIC -g -c -Wall  xermsg.f
+gfortran -fPIC -g -c -Wall  xerprn.f
+gfortran -fPIC -g -c -Wall  xersve.f
+gfortran -fPIC -g -c -Wall  xerhlt.f
+gfortran -fPIC -g -c -Wall  xercnt.f
+gfortran -fPIC -g -c -Wall  xgetua.f
+gfortran -fPIC -g -c -Wall  BD_TIPS_2003.for
+
+
+
