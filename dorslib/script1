@@ -18,6 +18,7 @@ gfortran -fPIC -g -c -Wall  xerhlt.f
 gfortran -fPIC -g -c -Wall  xercnt.f
 gfortran -fPIC -g -c -Wall  xgetua.f
 gfortran -fPIC -g -c -Wall  BD_TIPS_2003.for
+gfortran -fPIC -g -c -Wall  HUMLIK.f
 
 
 

@@ -18,17 +18,18 @@ void dbint4_(double*, double*, int*, int*, int*,  double*, double*,
 
 double dbvalu_(double*, double*, int* ,int*,int* ,double*, int*, double*);
 
-//toms library
+//toms library Gauss quadrature
 void weightcoeff_(int*, double*, double*, double*, double*,
                        double*, double*);
-
-
 }
 
-void Questioner(int&, bool&, int&, int&, int&, int&, bool&, double&, double&,
-                double&, double&, int&, bool&, bool&, int&, int&, int&, int&, bool&,
-                int&, bool&, double&, double&, bool&, double&,
-                bool&, double&, double&, double&, double&, double&, int&, int&,
+void Questioner( bool&,
+                int&, int&, int&, int&, bool&, double&,
+                double&, double&, double&, bool&,  int&, bool&, bool&, int&,
+                int&, int&, int&, bool&, bool&, bool&, 
+                int&, double&, double&, bool&, double&,
+                bool&, double&, double&, double&, double&, double&, int&, 
+                bool&, bool &, int&, double&, double&,
                 const char*);
 
 void WaterVap(double* , double* , double* ,
@@ -36,120 +37,203 @@ void WaterVap(double* , double* , double* ,
               
 
 int main(int argc, char* argv[]){
-/*
-Stage 1: Define basic physical data, read in basic molecular atmosperic data
-Stage 2: Calculate integration grid and interpolate data to integration grid
-Stage 3: Integrate data to get slabs for all molecular masses, air density, and humidity
-*/
 
-  bool verbose;
-/***************************************************************************************
-   Begin Stage 1
+  bool verbose;   //verbose mode for input, read from file if false;
+  bool verbose_out=true;  // output loads of info to standard output
+  bool verbose_height=false;   //output height integration info to std::out
+/**************************************************************************************
+   Stage 1:  declare and define various data to define the atmosphere
+             read response function, read atmospheric definitions
+             get gauss quadrature rule
+             declare and initialise physical constants
+             read molparam, gasmask, isotopolgues, and set PPM files to read later
+             read in basic atmospheric data
 ****************************************************************************************
-   Define basic physical data, read in basic atmosperic data
+   Stage 2:  determine numbers of slabs in the 4 regions
+             Reverse the presssure profile so top down             
+             interpolate x axis is pressure, y axis is height
+             determine the four sets of equal pressures and the heights of all the "floors"
+             Find the fine grid points for gauss quadrature w.r.t height
+             Interpolate data onto fine grid
+****************************************************************************************
+   Stage 3:  Do the integrations w.r.t. height for masses, number densities, average
+             temperature pressure and pressure for all the nsplit1+nsplit4+nsplit3+nsplit4 sub-slabs.
+****************************************************************************************
+   Stage 4:  Loop over Hitran par files, read in line centres, calculate the spectrum
 ****************************************************************************************/
 
+
+/************************   BEGIN STAGE 1  *********************************************/
   // Four Aerosol layers, each to be split into nsplit slabs
   // Four layers are boundary layer, troposphere, stratosphere, and upper atmosphere
   int nsplit1,nsplit2,nsplit3,nsplit4;    
-  // boundary layer visibility (or optical depth), toposphere visiblility
-  // (or optical depth),  wavelength
-  double visb,vist,lambda1, lambda2;
+  // boundary layer visibility , troposphere visiblility, wavelength1, wavelength2
+  double visb, vist, lambda1, lambda2;
+  bool rfun=true;  //true if we are using myresp.ddat or myrespX.dat as a response function file
   bool vis;  //true if entered as visibility, false if entered as optical depth.
   // default atmosphere 1-6 or user defined
-  int imode; //1 if Earth atmosphere, othere alternative not coded for yet.
-  int iatm;
-  bool switchR;
-  bool switchA;
-  int itypeu, itypes, itypet, itypeb;
-  bool ocean,ground;
-  int  ihumid;
-  double  groundtemp, groundpress;
-  bool cloud, know;
-  bool aeroplane;
-  double heightplane;
+  int iatm;    //atmosphere ID
+  bool switchR;    //Switch Rayleigh scattering on/off
+  bool switchA;    //Switch aerosol scattering on/off
+  int itypeu, itypes, itypet, itypeb;    //types for upper atmosphere, stratosphere, troposphere, bdry layer
+  bool ocean=false, groundT=false, groundP=false;  //ocean or maritime, know ground temperature, know ground pressure
+  int  ihumid;      // use default humid or user defined
+  double  groundtemp, groundpress;  //values for ground pressure and temperature (negative if unknown)
+  bool cloud; // do we have clouds
+  bool aeroplane;  //do we want to simulate aeroplane remote sensing
+  double heightplane;  //negative if no aeroplane
 
-  bool default_pause;
-  double HG, HB, HT, HS, HU;
-  int ngaussL, ngaussH;
-  const char* ReadInput;
-  const char* RespFile;
+  bool default_pause;   //use default stratopause, topopause etc
+  double HG, HB, HT, HS, HU;  //height of ground, bdry layer, tropopause, stratosphere
+  int ngauss_height, ngauss_correlkay;       //order of Gauss-Legendre quadrature height and cumulative distribution
+  bool calcspec, outspec;              //if false, don't bother with calculating the 
+  double nu_cut, nu_Delta;
+  const char* ReadInput;      //name of input file
+  const char* RespFile;       //name of response function file
 
    // First off we read in the user input, whether 
    // from command line (Dors1 -v) or an input file (Dors1)
 
-    if(argc==1)
-     verbose=false;
-     ReadInput="Dors1in.dat";
-     if(argc !=1)
-     {
-       if(argc==2){
-         RespFile="myresp.dat";
-         if(argv[1][0]=='-' && argv[1][1]=='v'){
-           verbose=true;
-           ReadInput="Dors1in.dat"; //Not used, but initialise anyway 
-          }
-         else
-         {
-             ReadInput=argv[1];
-             cout << "Reading from file=" << ReadInput << endl;
-         }
-       }
-        else
-       {
-         if(argc==3){
-          RespFile=argv[2];
-             cout << "Response function from file=" << RespFile<< endl;
-         }
-         else
-         {
-            cout << "Usage Dors1 or Dors1 -v" << endl;
-            cout << "argc=" << argc << endl;
-            exit(2);
-         }
-        }
-    }
+
 
    /*****************************************************************/
    // NOTE -NO SAFETY BELTS, THE USER MUST MAKE SURE THE INPUT IS O.K.
    /*****************************************************************/
+   //Questions the user for atmospheric types and so on
+   //or reads data from file if verbose is false
 
-   Questioner(imode,verbose, nsplit1, nsplit2, nsplit3, nsplit4, vis, visb, vist,
-   lambda1, lambda2, iatm, switchR, switchA,itypeu, itypes, itypet, itypeb, ocean,
-   ihumid, know, groundtemp, groundpress, aeroplane, heightplane,
-   default_pause, HG, HB, HT, HS, HU, ngaussL, ngaussH, ReadInput);  
+    if(argc==1)
+     verbose=false;
 
-   // for Gauss quadrature routine in toms library
-    double Q[ngaussL],E[ngaussL],Xgauss[ngaussL],Wgauss[ngaussL],Work_g[9*ngaussL+8];
-    double EPS, Xtemp[ngaussL];
+     ReadInput="Dors1in.dat";
+     RespFile="myresp.dat";
+
+     if(argc !=1)
+     {
+       if(argc==2){
+         //it was either Dors1 -v or Dors1 Dors1inX.dat
+         if(argv[1][0]=='-' && argv[1][1]=='v'){
+           verbose=true;
+           ReadInput="Dors1in.dat"; //Not used, but initialise anyway 
+           RespFile="myresp.dat";
+          }
+         else
+         {
+             ReadInput=argv[1];
+             RespFile="myresp.dat";
+             cout << "Reading input from file=" << ReadInput << endl;
+         }
+       }  //endif argc==2
+
+         if(argc==3){
+          // It should have been Dors1 Dors1inX.dat myrespX.dat
+             ReadInput=argv[1];
+             cout << "Reading input from file=" << ReadInput << endl;
+             RespFile=argv[2];
+             cout << "Response function from file=" << RespFile<< endl;
+         }
+
+         if(argc>4){
+            // presumably some garbage or other crept in
+            cout << "Usage Dors1 or Dors1 -v" << endl;
+            cout << "argc=" << argc << endl;
+            exit(2);
+         }
+    }  //endif argc !=1
+
+
+   Questioner(verbose,
+              nsplit1, nsplit2, nsplit3, nsplit4, vis, visb,
+              vist, lambda1, lambda2, rfun,  iatm, switchR, switchA, itypeu,
+              itypes, itypet, itypeb, ocean, groundP, groundT,
+              ihumid, groundtemp, groundpress, aeroplane, heightplane,
+              default_pause, HG, HB, HT, HS, HU, ngauss_height, 
+              calcspec, outspec, ngauss_correlkay, nu_cut, nu_Delta,
+              ReadInput);  
+
+    int nresp;
+    double* lambda_resp; double* respval;
+    if(rfun){
+       ifstream fp_in;
+       fp_in.open(RespFile, ios::in);
+       if(!fp_in.is_open()){ cerr << "Failed to open file (" << RespFile << ")"  << endl; exit(1); }
+       fp_in >> nresp;
+        lambda_resp=new double[nresp]; respval=new double[nresp];
+        for(int i=0; i< nresp ; i++){
+         fp_in >> lambda_resp[i] >> respval[i];
+        }
+        lambda1=lambda_resp[0]; lambda2=lambda_resp[nresp-1];
+        fp_in.close();
+        cout << "Response function file overrides wavelengths in Dors1in.dat\n";
+        cout << "Wavelengths used are " << lambda1 << " and " << lambda2 << endl;
+    }
+
+
+
+   // Use Gauss quadrature routine in toms library
+
+ 
+   /* *********************************************************** */
+   /*        Quadrature Rule for height integration               */
+   /* *********************************************************** */
+    double Q[ngauss_height],E[ngauss_height],Xgauss[ngauss_height],Wgauss[ngauss_height],Work_g[9*ngauss_height+8];
+    double EPS, Xtemp[ngauss_height]; //needed for Gauss quadrature Xgauss=knots, WGauss are the weights.
 
     EPS=1e-15;
-    for(int i=2;i<=ngaussL;i++){
+    for(int i=2;i<=ngauss_height;i++){
        Q[i-1]=2.*i*i/(2.*i*(2.0*i-1.0));
        E[i-1]=2.*i*i/(2.*i*(2.0*i+1.0));
     }
     Q[0]=1.0;
     E[0]=1.0/3.0;
     //toms algorithm 125
-    weightcoeff_(&ngaussL,Q,E,&EPS,Wgauss,Xgauss,Work_g);
+    weightcoeff_(&ngauss_height,Q,E,&EPS,Wgauss,Xgauss,Work_g);
     // why?
 
     //for some reason the x interval is [0,2]
-   // and you have to double the weights if you want [0,2]
+    //and you have to double the weights if you want [0,2]
     //not only that the X are in reverse order
-    // W not affected since it is symmetric anyway
     //now transform to [0,1] 
 
-    for(int i=1; i <=ngaussL; i++){
+    for(int i=1; i <=ngauss_height; i++){
        Xgauss[i-1]=Xgauss[i-1]/2.0;
        Xtemp[i-1]=Xgauss[i-1];
     } 
-    for(int i=0; i <ngaussL; i++){
-        Xgauss[i]=Xtemp[ngaussL-i-1];
+    for(int i=0; i <ngauss_height; i++){
+        Xgauss[i]=Xtemp[ngauss_height-i-1];
     }
             
    /* *********************************************************** */
-   /*        Quadrature Rule Done                                 */
+   /*        Quadrature Rule for Correletad kay                   */
+   /* *********************************************************** */
+    double QK[ngauss_correlkay],EK[ngauss_correlkay],XgaussK[ngauss_correlkay],WgaussK[ngauss_correlkay],Work_gK[9*ngauss_correlkay+8];
+    double EPSK, XtempK[ngauss_correlkay]; //needed for Gauss quadrature Xgauss=knots, WGauss are the weights.
+
+    EPSK=1e-15;
+    for(int i=2;i<=ngauss_correlkay;i++){
+       QK[i-1]=2.*i*i/(2.*i*(2.0*i-1.0));
+       EK[i-1]=2.*i*i/(2.*i*(2.0*i+1.0));
+    }
+    QK[0]=1.0;
+    EK[0]=1.0/3.0;
+    //toms algorithm 125
+    weightcoeff_(&ngauss_correlkay,QK,EK,&EPSK,WgaussK,XgaussK,Work_gK);
+    // why?
+
+    //for some reason the x interval is [0,2]
+    //and you have to double the weights if you want [0,2]
+    //not only that the X are in reverse order
+    //now transform to [0,1] 
+
+    for(int i=1; i <=ngauss_correlkay; i++){
+       XgaussK[i-1]=XgaussK[i-1]/2.0;
+       XtempK[i-1]=XgaussK[i-1];
+    } 
+    for(int i=0; i <ngauss_correlkay; i++){
+        XgaussK[i]=XtempK[ngauss_correlkay-i-1];
+    }           
+   /* *********************************************************** */
+   /*        Quadrature Rule for correlate k done                 */
    /* *********************************************************** */
 
    //Some constants
@@ -157,17 +241,17 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
    double pi,abszero,R,AV,MWA,delta,nucleon;
 
    pi=acos(-1.0);               //Well pi obviusly
-   abszero=273.15;              //absolte zero =-abszero celcius
+   abszero=273.15;              //0 degrees C in Kelvin
    R=8.314472;                  //Universal gas constant
    AV=6.0221415e23;             //Avogadro's number;
    MWA=28.946;                  //Molecular Weight of Air
    delta=0.029;                 //depolarisation factor
-   nucleon=1.660588E-24;         // "nucleon mass" in g
+   nucleon=1.66053886E-24;      //"nucleon mass" (a.m.u) in grammes
 
 
    ifstream fp_in;   //input file stream
-   int gid[50];
-   bool gmask[50];
+   int gid[50];      //HITRAN gas numbers (last few are dummies)
+   bool gmask[50];   //if false, ignore that gas
    fp_in.open("GasMask.dat", ios::in);
    if(!fp_in.is_open()){ cout << "Failed to open file (GasMask.dat)" << endl;  exit(1);}
    fp_in >> gid[0] >> gid[1] >> gid[2] >> gid[3] >> gid[4] >>
@@ -191,7 +275,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
    fp_in >> gmask[40] >> gmask[41] >> gmask[42] >> gmask[43] >> gmask[44] >>
             gmask[45] >> gmask[46] >> gmask[47] >> gmask[48] >> gmask[49];
    fp_in.close();
-   const char* AllMols[50];
+   const char* AllMols[50];   //File names for reading gas number density profiles
    if(iatm==1)AllMols[0]="Atmospheres/Mols1_H2O.dat";if(iatm==2)AllMols[0]="Atmospheres/Mols2_H2O.dat";
    if(iatm==3)AllMols[0]="Atmospheres/Mols3_H2O.dat";if(iatm==4)AllMols[0]="Atmospheres/Mols4_H2O.dat";
    if(iatm==5)AllMols[0]="Atmospheres/Mols5_H2O.dat";if(iatm==6)AllMols[0]="Atmospheres/Mols6_H2O.dat";
@@ -235,8 +319,9 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
    AllMols[44]="Atmospheres/Mols_X3.dat";  AllMols[45]="Atmospheres/Mols_X4.dat";
    AllMols[46]="Atmospheres/Mols_X5.dat";  AllMols[47]="Atmospheres/Mols_X6.dat";
    AllMols[48]="Atmospheres/Mols_X7.dat";  AllMols[49]="Atmospheres/Mols_X8.dat";
+
    fp_in.open("Atmospheres/AllIsos.dat",ios::in);
-   int nice[50]; // number of isotope variations (isotopolgues) in each  molecule
+   int nice[50]; // number of isotope variations (isotopolgues) for  each gas  molecule
    fp_in >>nice[0]>>nice[1]>>nice[2]>>nice[3]>>nice[4]>>nice[5]>>nice[6]>>nice[7]>>nice[8]>>nice[9];
    fp_in >>nice[10]>>nice[11]>>nice[12]>>nice[13]>>nice[14]>>nice[15]>>nice[16]>>nice[17]>>nice[18]>>nice[19];
    fp_in >>nice[20]>>nice[21]>>nice[22]>>nice[23]>>nice[24]>>nice[25]>>nice[26]>>nice[27]>>nice[28]>>nice[29];
@@ -252,8 +337,8 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
    int nicecode[50][10];  //HITRAN isotope code for molecule
    double AllMolW[50][10]; //molecular weights for isotopologue
    double niceabund[50][10];  //relative abundance of isotopologue
-   double QTref[50][10];
-   int geejay[50][10];
+   double QTref[50][10];      //partition function at reference temperature 296K
+   int geejay[50][10];        //state degeneracy factor
    //initialise
    for(int i=0; i<50; i++){
      for(int j=0; j<10; j++){
@@ -273,7 +358,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
       for(int iso=0; iso<nice[imol];iso++){
          fp_in >>  nicecode[imol][iso] >> niceabund[imol][iso] >> QTref[imol][iso]
                >> geejay[imol][iso] >> AllMolW[imol][iso];
-         cout << imol+1 << " " << nice[imol] << "  " << nicecode[imol][iso] << "  " << AllMolW[imol][iso] << endl;
+         if(verbose_out)cout << imol+1 << " " << nice[imol] << "  " << nicecode[imol][iso] << "  " << AllMolW[imol][iso] << endl;
       }
       if(!getline(fp_in,line1)){ break;}
        // << "  getline return\n";
@@ -281,19 +366,21 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
      // if(getline(fp_in, line1).eof()){ break;}
       imol++;
    }
-   fp_in.close(); 
+   fp_in.close(); //molparam.txt finished with
 
-   int ngas=0;
+   int ngas=0;  //the number of gases not masked out.
    for(int  i=0;i<50;i++){
-       if(gmask[i])ngas++;}
+       if(gmask[i])ngas++;}   
 
 
-   int gases[ngas];
+   int gases[ngas];  //HITRAN gas IDs
    //MolFiles are just the Atmospheres/MolsX files actually used
    //rather than (but might possibly be) the whole set 
-   const char* MolFiles[ngas];
-   double MWGAS[ngas];
-   ngas=0;
+   const char* MolFiles[ngas];      //A copy of AllMols, but only containing the gases actually taken into account
+   double MWGAS[ngas];              //The MEAN molecular weight of each gas, taking into account the
+                                    // isotopologues and abundances
+
+   ngas=0;     //reset to zero now declarations have been made
    for(int i=0;i<50;i++){
        if(gmask[i]){
            gases[ngas]=gid[i];
@@ -303,46 +390,32 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
            for(int j=0; j<nice[i]; j++){
               MWGAS[ngas]=MWGAS[ngas]+niceabund[i][j]*AllMolW[i][j];
            }
-           ngas++;
+           ngas++;                           //recount ngas
            }}
-    cout << "iatm=" << iatm << endl;
-    for(int i=0; i<ngas;i++){
-      cout << gases[i] << "  " << MolFiles[i] << "   MW=" << MWGAS[i] << endl;
+      cout << "iatm=" << iatm << endl;         //output as user check
+
+      for(int i=0; i<ngas;i++){
+      if(verbose_out)cout << gases[i] << "  " << MolFiles[i] << "   MW=" << MWGAS[i] << endl;
           }
              
 /* ********************************************************************* */
-//            Points for quadrature
+//    Points for integrating over height - first read in the data
 /* ********************************************************************* */
-
-
-    double zstep1,zstep2,zstep3,zstep4,thik1,thik2,thik3,thik4;
-
-    thik1=(HU-HS)*1000.0/((double)(nsplit1));
-    thik2=(HS-HT)*1000.0/((double)(nsplit2));
-    thik3=(HT-HB)*1000.0/((double)(nsplit3));
-    thik4=(HB-HG)*1000.0/((double)(nsplit4));
-
-   int nmix=3;      //for mixing aerosols
-   int nprofs=6;    //Number of profiles stored
 
    fp_in.open("Atmospheres/Alts.dat", ios::in);
    if(!fp_in.is_open()){ cout << "Failed to open file (Atmospheres/Alts.dat)" << endl;  exit(1);}
 
-   int i_altitudes;
+   int i_altitudes;     //i_altitudes is the number of altitudes defining the temperature and pressure profiles
    fp_in >> i_altitudes;
-   double altitude[i_altitudes];
+   double altitude[i_altitudes];    //altitude[] contains these altitudes
    for(int i=0;i<i_altitudes;i++){
      fp_in >> altitude[i];
+     altitude[i]=altitude[i]*1000.0;  //convert to metres
      }
-     //convert to metres
-     for(int i=0; i<i_altitudes; i++)
-        altitude[i]=altitude[i]*1000.0;
-   fp_in.close();
-
-
+    fp_in.close();
 
    char sub[3];
-   sprintf(sub,"%d",iatm);
+   sprintf(sub,"%d",iatm);   //we shall substitute the atmosphere number into the strings for the input files
 
    string Tempsname="Atmospheres/Temps .dat";
    // stringreplace(index, num1, const char*, num2)
@@ -352,13 +425,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
    fp_in.open(Tempsname.c_str(), ios::in);
    if(!fp_in.is_open()){ cout << "Failed to open file, file= " <<  Tempsname.c_str() << endl;  exit(1);}
 
-/*
-   cout << Tempsname.c_str() << "  " <<  fp_in.good() << endl;
-   cout << Tempsname.c_str() << "  " << fp_in.bad() << endl;
-   cout << Tempsname.c_str() << "  " << fp_in.eof() << endl;
-   cout << Tempsname.c_str() << "  " << fp_in.fail() << endl;  
-*/
-   int idata;    //LOWTRAN T-P-H20 heights
+   int idata;    //Make sure the number of temperatures (idata) is the same as i_altitudes
    fp_in >> idata;
    if(idata !=i_altitudes){
         cout << "Temperature data does not match altitudes\n";  exit(1);}
@@ -367,8 +434,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
    for(int i=0;i<idata;i++){
       fp_in >>  T[i];
    }
-
-   fp_in.close();
+   fp_in.close();  // now do the same for the pressure data
 
    string Pressname="Atmospheres/Press .dat";
    Pressname.replace(17,1,sub,1);
@@ -379,22 +445,25 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
    if(idata !=i_altitudes){
          cout << " Pressure data does not match altitude data\n" << endl; exit(1);}
 
-   double P[idata];
+   double P[idata];      //Pressures at the input heights
    for(int i=0;i<idata;i++){
       fp_in >>  P[i] ;
     //  cout << i << "  " << P[i] << endl;
       }
     fp_in.close();
 
-    double Gee1[idata];  //Gee1 only needed if using Hum1_7.dat data
+    // If we have non default water vapour via a humidity file we
+    // need to calculate the number density of the water vapour molecules, store in Gee1 and Gee2
+    double Gee1[idata];  //Gee1 only needed if using Hum1_7.dat data 
     double Gee2[idata];  //Gee2 only needed if using Hum2_7.dat data
+                         //We shall need humidity for aerosol hygroscopic growth
     double Hum1[idata];  //Hum1 and Humids1 needed to store humidity values over liquid water
     double Hum2[idata];  //Hum2 and Humids2 needed to store humidity values over ice
-    double GasPPM[idata][ngas];
+    double GasPPM[idata][ngas];  //Gas concentration of the selected gasess in ppm
     double x1;
     //now read in data for gases
     for(int i=0;i<ngas;i++){
-       fp_in.open(MolFiles[i],ios::in);
+       fp_in.open(MolFiles[i],ios::in);  //open the HITRAN molecular profiles
        if(!fp_in.is_open()){cout << "Failed to open file, file= " <<  MolFiles[i] << endl;  exit(1);}
        fp_in >> idata;
        if(idata!=i_altitudes){cout << MolFiles[i] << "data does not match altitude data\n"; exit(1);} 
@@ -412,19 +481,20 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
        ig=0;  //Water Vapour
        int iwi; // 1 for equilibrium with water, 2 for equilibrium with ice
        int idataW1, idataW2;
-       if(ihumid==2){
+       if(ihumid==2){    //not using default profiles but user humidity profiles instead
          ifstream fp_humid;
          //CHANGE FOR 1-6 +User  later
          fp_humid.open("Atmospheres/Hum1_U.dat", ios::in);
          fp_humid >> idataW1;
-         if(idataW1 > i_altitudes){
+         if(idataW1 != i_altitudes){
               cout <<"Humidity Files don't match altitude\n"; exit(1);}
-         //note that humidity files with idata=1 or 2 recommended
-         //then GasPPM for H20 only changed at the ground or first km
-
          for(int i=0; i <idataW1; i++){ 
              fp_humid >> Hum1[i];}
          fp_humid.close();
+         //note that humidity files with idata=1 or 2 recommended
+         //then GasPPM for H20 only changed at the ground or first km
+
+
          fp_humid.open("Atmospheres/Hum2_U.dat", ios::in);
          fp_humid >> idataW2;
          if(idataW1 != idataW2){
@@ -432,13 +502,16 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
          for(int i=0; i <idataW1; i++){ 
              fp_humid >> Hum2[i];}
          fp_humid.close();
+          //have two humidity humidity profiles
+          //since ihumid=2 convert to ppm via function WaterVap 
+
          iwi=1;
          WaterVap(P,T,Gee1,Hum1,AV,nucleon,MWGAS[0],idataW1,ihumid,iwi);
          iwi=2;
          WaterVap(P,T,Gee2,Hum2,AV,nucleon,MWGAS[0],idataW1,ihumid,iwi);
 
          for(int i=0; i <idataW1; i++){ 
-             if(T[i]>abszero){  // remember abszero is the negative of absolute zero
+             if(T[i]>abszero){  // remember 0 Celcius=abszero Kelvin
                  GasPPM[i][ig]=Gee1[i];}
              else{
                  GasPPM[i][ig]=Gee2[i];}
@@ -447,19 +520,31 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
            ihumid=1;
         }  // end for using Hum1 and Hum2 files and calculating GasPPM for H20
         else{
-           // we calculate Hum1 and Hum2 from GassPPM for H20
+           // we calculate Hum1 and Hum2 from GasPPM for H20 since ihumid=1
+           // needed for aerosols later, 
            iwi=1;
            WaterVap(P,T,Gee1,Hum1,AV,nucleon,MWGAS[0],idata,ihumid,iwi);
            iwi=2;
            WaterVap(P,T,Gee2,Hum2,AV,nucleon,MWGAS[0],idata,ihumid,iwi);
+
+//         UNCOMMENT THESE LINES IF YOU WANT HUMIDITY OUTPUT
+//           ofstream Hum1file, Hum2file;
+//            Hum1file.open("Temp_Humid1.dat",ios::out);
+//            Hum2file.open("Temp_Humid2.dat",ios::out);
+//           Hum1file << idata << endl; Hum2file << idata << endl;
+//           for(int ihum=0; ihum< idata; ihum++){
+//              Hum1file << Hum1[ihum] << endl; Hum2file << Hum2[ihum] << endl;
+//          }
+
         }
   
-      if(ground==1){
+      if(groundP){
             //scale temperature and pressure to ground;
             double tempP=groundpress/P[0];
             for(int i=0; i< idata; i++){
                P[i]=P[i]*tempP;  
-              }
+              }}
+            if(groundT){
             double tempT=groundtemp/T[0];
             T[0]=T[0]*tempT;
             T[1]=T[1]*tempT;    // only scale lower atmosphere
@@ -469,9 +554,10 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
     // We need to integrate quanties in each sublayer, get gauss
     // quadrature weights and coefficients on (0,1)
 /***************************************************************************************
-   End Stage 1
+                          END STAGE 1
 ****************************************************************************************
-   Begin Stage 2, calc integration nodes and interpolate data  to them
+                         BEGIN STAGE 2
+              Calculate integration nodes and interpolate data  to them
 ****************************************************************************************/
         //need T and P data etc at fine resolution (heights)
         // Spline from T and P data etc at
@@ -480,7 +566,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
 
         //prepare for calls to dbint4.f
         //
-        double HBDRY[5], PBDRY[5];
+        double HBDRY[5], PBDRY[5];   //Heights and pressures at 4 main boundaries
         
         HBDRY[0]=HG*1000.0; HBDRY[1]=HB*1000.0; HBDRY[2]=HT*1000.0;
         HBDRY[3]=HS*1000.0; HBDRY[4]=HU*1000.0; 
@@ -513,24 +599,25 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
         ideriv=0; inbv=1; //inbv must always be set to 1 on first call to dbvalu
         for(int i=0; i<5;i++){
            PBDRY[i]=dbvalu_(TEE,BCOEF,&IN,&KORDER
-                                 ,&ideriv, HBDRY+i, &inbv,WORK2);
+                                 ,&ideriv, HBDRY+i, &inbv,WORK2);  //find pressures at the boundaries
          }
 
         //Need to find heights at equal pressure intervals
         //
-        int up_to_top, up_to_up, up_to_strat, up_to_trop;
+        int up_to_top, up_to_up, up_to_strat, up_to_trop;  //numbers of slabs from ground to each bdry
         up_to_top=nsplit4+nsplit3+nsplit2+nsplit1;
         up_to_up=nsplit4+nsplit3+nsplit2;
         up_to_strat=nsplit4+nsplit3;
         up_to_trop=nsplit4;
-        double floorpress[up_to_top];
-        double HeightFloors[up_to_top];
-        double ReverseP[idata];
-        double ReverseH[idata];
+        double floorpress[up_to_top];    //pressures at the "floor" of each slab
+        double HeightFloors[up_to_top];   //heights of those floors
+        double ReverseP[idata];           // i_altitude pressures top down
+        double ReverseH[idata];           //altitude top down
        //     cout  << "Reverse " << idata <<  endl;
         for(int i=0; i< idata; i++){
             ReverseP[i]=P[idata-1-i];
-            ReverseH[i]=altitude[idata-1-i];}
+            ReverseH[i]=altitude[idata-1-i];
+         }
 
 
         //ground to troposphere
@@ -558,66 +645,69 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
         dbint4_(ReverseP,ReverseH,&idata,&IBCL,&IBCR,&FBCL,&FBCR,
                        &KNOPT, TEE, BCOEF,&IN, &KORDER, WORK);
 
+        //find the heights of the bottom of every sub-slab in the atmosphere
+        //by sub-slab I mean slabs within the four aerosol regions
         for(int i=0; i<up_to_top;i++)
            HeightFloors[i]=dbvalu_(TEE,BCOEF,&IN,&KORDER
                                  ,&ideriv,floorpress+i,&inbv,WORK2);
 
 
         ideriv=0,inbv=1; //inbv must always be set to 1 on first call to dbvalu
+        //spline temperature as a function of height
         dbint4_(altitude,T,&idata,&IBCL,&IBCR,&FBCL,&FBCR,
                        &KNOPT, TEE, BCOEF, &IN, &KORDER, WORK);
 
-        double FloorTemp[up_to_top];
-        double SlabThick[up_to_top];
+        double FloorTemp[up_to_top];   //Temperature at the floor of each sub-slab
+        double SlabThick[up_to_top];   //thickness of each slab
         for(int i=0; i<up_to_top;i++){
            FloorTemp[i]=dbvalu_(TEE,BCOEF,&IN,&KORDER
                                  ,&ideriv,HeightFloors+i,&inbv,WORK2);
 
         //we shall do all calculations ground up
-        // but output them top down
+        // but output them top down  --- HeightFloors is top down
            if(i==up_to_top-1){
               SlabThick[i]=HBDRY[4]-HeightFloors[i];
-            //  cout << "Floors " << HeightFloors[i] << " "  <<floorpress[i] << " " << FloorTemp[i] <<
-            //   " " << SlabThick[i] << endl;
+                if(verbose_height)cout << "Floors " << HeightFloors[i] << " "  <<floorpress[i] << " " << FloorTemp[i] <<
+               " " << SlabThick[i] << endl;
                }
               else{
               SlabThick[i]=HeightFloors[i+1]-HeightFloors[i];
-            //  cout << "Floors " << HeightFloors[i] << " "  <<floorpress[i] << " " << FloorTemp[i] <<
-            //   " " << SlabThick[i] << endl;
+                if(verbose_height)cout << "Floors " << HeightFloors[i] << " "  <<floorpress[i] << " " << FloorTemp[i] <<
+                " " << SlabThick[i] << endl;
                }
          } //end i<up_to_top loop
 
         //Calc Gauss integration heights ground up
-        int iheight;
-        iheight=ngaussL*up_to_top;
+        int iheight;     //fine grid for temperature and pressure
+        iheight=ngauss_height*up_to_top;
         double heights[iheight];
         int kount=0;
         for(int i=0; i<nsplit4; i++){
-           for(int j=0; j<ngaussL; j++){
+           for(int j=0; j<ngauss_height; j++){
            heights[kount]=HeightFloors[i]+SlabThick[i]*Xgauss[j];
-   //        cout <<"kount=" << kount << "  heights=" << heights[kount] 
+           if(verbose_height)cout <<"kount=" << kount << "  heights=" << heights[kount] 
            kount++;
         }}
         for(int i=0; i<nsplit3; i++){
-           for(int j=0; j<ngaussL; j++){
+           for(int j=0; j<ngauss_height; j++){
            heights[kount]=HeightFloors[up_to_trop+i]+SlabThick[up_to_trop+i]*Xgauss[j];
-        //   cout <<"kount=" << kount << "  heights=" << heights[kount] << endl;
+           if(verbose_height)cout <<"kount=" << kount << "  heights=" << heights[kount] << endl;
            kount++;
         }}
         for(int i=0; i<nsplit2; i++){
-           for(int j=0; j<ngaussL; j++){
+           for(int j=0; j<ngauss_height; j++){
            heights[kount]=HeightFloors[up_to_strat+i]+SlabThick[up_to_strat+i]*Xgauss[j];
-        //   cout <<"kount=" << kount << "  heights=" << heights[kount] << endl;
+           if(verbose_height)cout <<"kount=" << kount << "  heights=" << heights[kount] << endl;
            kount++;
         }}
         for(int i=0; i<nsplit1; i++){
-           for(int j=0; j<ngaussL; j++){
+           for(int j=0; j<ngauss_height; j++){
            heights[kount]=HeightFloors[up_to_up+i]+SlabThick[up_to_up+i]*Xgauss[j];
-        //   cout <<"kount=" << kount << "  heights=" << heights[kount] << endl;
+           if(verbose_height)cout <<"kount=" << kount << "  heights=" << heights[kount] << endl;
            kount++;
         }}
            
-        double Temp[iheight],Press[iheight];
+        double Temp[iheight],Press[iheight];  //temperature and pressure on fine grid
         for(int i=0; i<iheight;i++){
            Temp[i]=dbvalu_(TEE,BCOEF,&IN,&KORDER
                                  ,&ideriv,heights+i,&inbv,WORK);}
@@ -626,10 +716,11 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
                        &KNOPT, TEE, BCOEF, &IN, &KORDER, WORK2);
         for(int i=0; i<iheight;i++)
            Press[i]=dbvalu_(TEE,BCOEF,&IN,&KORDER
-                                 ,&ideriv,heights+i,&inbv,WORK2); 
-        double ENN[iheight],Dens[iheight];
+                                 ,&ideriv,heights+i,&inbv,WORK2);
+         
+        double ENN[iheight],Dens[iheight];  //Number of molecules per cubic metre, density Kg per m^3
         for(int i=0; i<iheight;i++){
-            //multiply by 100 to get pressure in Pascals
+            //multiply by 100 to convert pressure to Pascals
             ENN[i]=Press[i]/R/Temp[i]*AV*100.; 
             // multiply by MW to get mass per vol in gramms
             // divide by 1000 to get mass per vol in Kg
@@ -637,16 +728,13 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
             Dens[i]=ENN[i]*MWA*nucleon/1000.0;    
             }
 
-        double GPPM[idata];
-        double G[iheight];
-        double Humids1[iheight];
-        double Humids2[iheight];
-        double Gas[iheight][ngas];   
+        double GPPM[idata];   //coarse grid gas parts per million (spare copy needed for interpolation)
+        double G[iheight];    //fine grid data gas ppm, spare copy
+        double Humids1[iheight];   //fine grid data version of Hum1
+        double Humids2[iheight];   //fine grid data version of Hum2
+        double Gas[iheight][ngas];  //fine grid array of gas ppm for all gases not ignored
 
         for(int n=0;n<ngas;n++){
-
-           iwi=1;   // 1 if over water, 2 if over ice
-
            for(int i=0;i<idata;i++)
                 GPPM[i]=GasPPM[i][n];
 
@@ -660,22 +748,26 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
                  Gas[i][n]=G[i];
                        }
            if(n==0){
+           //remember ihumid is now 1, so we now get
+           //Humids1 andd Humids2 from temporary ppm profile in G.
            iwi=1;
            WaterVap(Press,Temp,G,Humids1,AV,nucleon,MWGAS[0],iheight,ihumid,iwi);
            iwi=2;
            WaterVap(Press,Temp,G,Humids2,AV,nucleon,MWGAS[0],iheight,ihumid,iwi);}
         }
-        double DensGas[iheight][ngas];
+        double DensGas[iheight][ngas];  // Density of each gas on fine grid.
         for( int n=0; n< ngas; n++){
            for( int i=0;i<iheight;i++){
                // divide ENN by 1E6 since Gas[i][n] is ppmv
+               // divide by a 1000 and DensGas is in Kg m^{-2} (remember necleon is in grammes.
                DensGas[i][n]=ENN[i]/1.0E6*Gas[i][n]*MWGAS[n]*nucleon/1000.0;
            }
          }
 /***************************************************************************************
-   End Stage 2
+                           END STAGE  2
 ****************************************************************************************
-   Begin Stage 3, Do Integrals
+                           BEGIN STAGE 3
+                           Do Integrals
 ****************************************************************************************/
             
        cout << "Begin Stage 3\n";
@@ -701,7 +793,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
            for(int k=0; k<ngas; k++){
              massgases[nsplit1-i][k]=0.0;
            }
-           for(int j=0; j < ngaussL; j++){
+           for(int j=0; j < ngauss_height; j++){
              kountH--;
              cout << "j=" <<  j << "  " << Wgauss[j] << " " << Temp[kountH] << " " << kountH << endl;
              AvTemp[nsplit1-i]=AvTemp[nsplit1-i]+Wgauss[j]*Temp[kountH];
@@ -720,7 +812,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
           totalmasses[k]=totalmasses[k]+massgases[nsplit1-i][k];
         }
         totalmass=totalmass+massgas[nsplit1-i];
-        cout << AvTemp[nsplit1-i] << "  " << AvPress[nsplit1-i] << "  " << totalmass <<endl;
+        if(verbose_height)cout << AvTemp[nsplit1-i] << "  " << AvPress[nsplit1-i] << "  " << totalmass <<endl;
         }
        idown=idown+nsplit1;
        cout << "***************************************\n";
@@ -732,7 +824,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
            for(int k=0; k<ngas; k++){
              massgases[nsplit2-i+idown][k]=0.0;
            }
-           for(int j=0; j < ngaussL; j++){
+           for(int j=0; j < ngauss_height; j++){
              kountH--;
              cout << "j=" << j << "  " << Wgauss[j] << " " << Temp[kountH] << " " << kountH << endl;
              AvTemp[nsplit2-i+idown]=AvTemp[nsplit2-i+idown]+Wgauss[j]*Temp[kountH];
@@ -750,7 +842,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
           totalmasses[k]=totalmasses[k]+massgases[nsplit2-i+idown][k];
         }
         totalmass=totalmass+massgas[nsplit2-i+idown];
-        cout << AvTemp[nsplit2-i+idown] << "  " << AvPress[nsplit2-i+idown] << "  " << totalmass << endl;
+        if(verbose_height)cout << AvTemp[nsplit2-i+idown] << "  " << AvPress[nsplit2-i+idown] << "  " << totalmass << endl;
         }
        idown=idown+nsplit2;
        cout << "***************************************\n";
@@ -762,7 +854,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
            for(int k=0; k<ngas; k++){
              massgases[nsplit3-i+idown][k]=0.0;
            }
-           for(int j=0; j < ngaussL; j++){
+           for(int j=0; j < ngauss_height; j++){
              kountH--;
              cout << "j=" << j << "  " << Wgauss[j] << " " << Temp[kountH] << " " << kountH << endl;
              AvTemp[nsplit3-i+idown]=AvTemp[nsplit3-i+idown]+Wgauss[j]*Temp[kountH];
@@ -780,7 +872,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
           totalmasses[k]=totalmasses[k]+massgases[nsplit3-i+idown][k];
         }
         totalmass=totalmass+massgas[nsplit3-i+idown];
-        cout << AvTemp[nsplit3-i+idown] << "  " << AvPress[nsplit3-i+idown] << "  " << totalmass << endl;
+        if(verbose_height)cout << AvTemp[nsplit3-i+idown] << "  " << AvPress[nsplit3-i+idown] << "  " << totalmass << endl;
         }
        idown=idown+nsplit3;
        cout << "***************************************\n";
@@ -792,7 +884,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
            for(int k=0; k<ngas; k++){
              massgases[nsplit4-i+idown][k]=0.0;
            }
-           for(int j=0; j < ngaussL; j++){
+           for(int j=0; j < ngauss_height; j++){
              kountH--;
              cout << "j=" << j << "  " << Wgauss[j] << " " << Temp[kountH] << " " << kountH << endl;
              AvTemp[nsplit4-i+idown]=AvTemp[nsplit4-i+idown]+Wgauss[j]*Temp[kountH];
@@ -810,22 +902,35 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
           totalmasses[k]=totalmasses[k]+massgases[nsplit4-i+idown][k];
         }
         totalmass=totalmass+massgas[nsplit4-i+idown];
-        cout << AvTemp[i+idown] << "  " << AvPress[i+idown] << "  " << totalmass << endl;
+        if(verbose_height)cout << AvTemp[i+idown] << "  " << AvPress[i+idown] << "  " << totalmass << endl;
         }
 
         cout << "mass of gas per square metre * g=" << 9.81*totalmass << "  Pascals="
               << 9.81*totalmass/100.0 << "mbar\n";
-        cout << "Discrepency due (mostly) to interpolation\n";
+        cout << "Ground pressure was given as " << P[0] << "mbar:  Discrepancy due to interpolation error\n";
+        cout << "We now scale masses to regain original ground pressure and convert to g per cm^2\n";
+        cout << "amd calculate number densities per cm^2 to calculate line strengths\n";
+
+        double correction=9.81*totalmass/P[0];
+
+        for(int i=0; i< iheight; i++){
+               Press[i]=Press[i]/correction; }
+        for(int i=0; i<5; i++){
+               PBDRY[i]=PBDRY[i]/correction; }
+        for(int i=0; i<up_to_top; i++){
+               PBDRY[i]=PBDRY[i]/correction; }
+               
 
         //convert from Kg per square metre to g per square cm.
         // Kg to g times=1000; metre square to cm square /=10000
 
         for(int k=0; k<ngas; k++){
           for(int i=0; i<up_to_top; i++){
-             massgases[i][k]=massgases[i][k]/10.0;
+             massgases[i][k]=massgases[i][k]/10.0/correction;
           }
-          totalmasses[k]=totalmasses[k]/10.0;
+          totalmasses[k]=totalmasses[k]/10.0/correction;
         }
+        totalmass=totalmass/10.0/correction;
 
         cout << "gases in each layer --- top down --- g per cm^2\n";
         for(int i=0; i<up_to_top; i++){ //top down actually
@@ -835,9 +940,17 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
         cout << "totals\n";
         for(int k=0; k < ngas ; k++){
              cout << totalmasses[k] << " ";}
-             cout <<  "  totalmass=" << totalmass <<endl; 
 
-//    declaration for HITRAN input
+        cout <<  "  totalmass=" << totalmass << "g per cm^2" << "  ground pressure now " << 9.81*10*totalmass << endl; 
+
+/***************************************************************************************
+                          END STAGE 3
+****************************************************************************************
+                         BEGIN STAGE 4
+                         HITRAN DATA 
+****************************************************************************************/
+
+//    declarations for HITRAN input
       cout <<" Now read HITRAN par files\n";    
       int Imol;                                    //molecule number
       int Iso;                                     //Isotopologue
@@ -850,7 +963,7 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
       double Press_shift   ;                       //Shift due to pressure
       int ierr[6];                                 //6 error parameters
       int iref[6];                                 //6 reference parameters
-      char flag;                                   //flag for poss, of line mixing
+      char flag;                                   //flag for possibility of line mixing
       double gp;                                   //Stat. Weight Upper 
       double gpp;                                  //Stat. Weight Lower
 
@@ -865,16 +978,12 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
       cout << "lambda1X  lambda2X  " << lambda1X << "  " << lambda2X << endl;
 
       string  PARFILE="HITRAN/   hit08.par";
-      double lambda;
-
-      vector<double> linecentres[ngas]; //line centres in wave number units.
+      double lambda;   // a wavelength
       
-
       string line;
       string entry[19];
       istringstream iss[19]; //19 input stringstreams
       for(int ig=0; ig<ngas; ig++){ //loop to read from HITRAN files.
-        linecentres[ig].clear();
         int molecule=gases[ig];
         int ireplace1=molecule/10; int  ireplace2=molecule%10;
         ireplace1=ireplace1+48; ireplace2=ireplace2+48; //ascci '0' is 48
@@ -886,10 +995,33 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
         if(!fp_in.is_open()){cout <<" can't open HITRAN file \n";
                              cout << PARFILE.c_str() << endl;  exit(1);}
         int kountlines=0;
+        int vecsize=nice[ig];
+        if(vecsize>nicemax)vecsize=nicemax;
+
+        vector<double> linecentres[vecsize];
+        vector<double> linestrengths[vecsize];
+        vector<double> linegammaAir[vecsize];     // air broadening
+        vector<double> linegammaSelf[vecsize];    // self broadening broadening
+        vector<double> lineLSE[vecsize];          // Lower state Energy
+        vector<double> line_gp[vecsize];          // Stat weight upper
+        vector<double> line_gpp[vecsize];         // Stat weight lower     
+
+        for(int k=0; k<vecsize; k++){
+            linecentres[k].clear();
+            linestrengths[k].clear();
+            linegammaAir[k].clear();
+            linegammaSelf[k].clear();
+            lineLSE[k].clear();    
+            line_gp[k].clear();    
+            line_gpp[k].clear();            
+         }
+
         while(!getline(fp_in, line).eof()){
           entry[1]=line.substr(2,1); //
           iss[1].str(entry[1]);
           iss[1] >> Iso;
+
+
           if(Iso<=nicemax){ // number of isotopologues considered
           entry[2]=line.substr(3,12); //get wave number first
           iss[2].str(entry[2]);
@@ -911,7 +1043,15 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
           cout << "Iso=" <<Iso << "  " << nicecode[Imol-1][Iso-1]  <<endl;
           cout << "nu="  << nu <<  "  "  << nu1 << "  " << nu2 << endl;
           cout << 10000/nu  << " " << lambda1X << " " << lambda2X<<  endl;
-          linecentres[ig].push_back(nu);
+
+          linecentres[Iso-1].push_back(nu);
+          linestrengths[Iso-1].push_back(S_intense);
+          linegammaAir[Iso-1].push_back(gamma_air);
+          linegammaSelf[Iso-1].push_back(gamma_self);
+          lineLSE[Iso-1].push_back(LSE);
+          line_gp[Iso-1].push_back(gp);
+          line_gpp[Iso-1].push_back(gpp);
+
           iss[3].str(entry[3]);
           iss[3] >> S_intense;
            cout << "S_intense="  << S_intense<< endl;
@@ -985,11 +1125,32 @@ Stage 3: Integrate data to get slabs for all molecular masses, air density, and 
 
           } //end while loop
         fp_in.close();
+        //At last we have the line centres for this particular gas.
+        
+/*****************************************************************************************
+        Calculate Spectrum - Work out Distributions
+******************************************************************************************/
+
+
+/*****************************************************************************************
+       Write Input Files for Dors3
+******************************************************************************************/
+
+/****************************************************************************************/
+        for(int i=0;i<vecsize;i++){
+            cout << "gas humber=" << ig+1 << " Isotopologue=" << i+1 << "  code=" <<nicecode[ig][i]
+                 << "  number of lines=" << linecentres[i].size()<< endl;
+                 linecentres[i].erase(linecentres[i].begin(), linecentres[i].end()); 
+                 linestrengths[i].erase(linestrengths[i].begin(), linestrengths[i].end()); 
+                 linegammaAir[i].erase(linestrengths[i].begin(), linestrengths[i].end()); 
+                 linegammaSelf[i].erase(linestrengths[i].begin(), linestrengths[i].end());  
+                 lineLSE[i].erase(linestrengths[i].begin(), linestrengths[i].end());       
+                 line_gp[i].erase(linestrengths[i].begin(), linestrengths[i].end());     
+                 line_gpp[i].erase(linestrengths[i].begin(), linestrengths[i].end());            
+            }
       }
-      //end loop over HITRAN par files
-      for(int ig=0;ig<ngas;ig++){
-         cout << linecentres[ig].size()<< endl;
-      }
+      //end loop over HITRAN par files ig=0 to ngas
+
 
   return 0;
 }

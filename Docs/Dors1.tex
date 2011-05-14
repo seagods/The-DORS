@@ -9,13 +9,15 @@
 \newtheorem{defn}{Definition}
 \renewcommand{\baselinestretch}{1.2}
 
+\usepackage[toc,page]{appendix}
+
 \begin{document}
 
 \bibliographystyle{prsty}
 
 \thispagestyle{empty}
 
-\title{{\it Dors1}: Building an Atmosphere}
+\title{{\it Dors1}---The Earth's Atmosphere}
 
 \author{C. Godsalve \\
 email:{\tt seagods@hotmail.com} }
@@ -24,61 +26,163 @@ email:{\tt seagods@hotmail.com} }
 
 \tableofcontents
 
-\section{A First Run of {\it Dors1}}
+\section{Building an Atmosphere --- A First Run-Through}
+
+\subsection{Basics}
 
 The first thing that is required for any atmospheric radiative transfer calculation is
-an atmosphere. This is the obvious place to start. The program that sets up
+an atmosphere. So much is obvious. The program that sets up
 the atmosphere for doing radiative transfer calculations is {\it Dors1}. 
 
 To do any radiation calculations in our ``one dimensional" atmosphere, we 
 require an atmosphere consisting of discrete
 layers or ``slabs". (The approximation in 1D radiative transfer is that the Earth is an infinite  flat plane,
- and that the properties of the atmosphere and ground have translational symmetry. We shall discuss the main limitations of this elsewhere.)
+ and that the properties of the atmosphere and ground have translational symmetry.)
 Each layer must have an {\it optical depth}, a {\it single scattering albedo}, 
-a {\it phase function}, and a temperature profile. {\it Dors1} has the job of creating a
-data file containing all this information. If the you are unfamiliar with these terms you need
+a {\it phase function}, and a temperature profile. The {\it Dors1} program has the job of creating a
+data file containing all this information. If you are unfamiliar with these terms you need
 to consult a standard textbook on radiative transfer such as by Chandrasekhar \cite{Chandrasekhar:Mybib},
  Goody and Yung \cite{GoodyYung:Mybib}, or Liou \cite{Liou:Mybib} before you can continue.
+As we shall see, we will end up with a set of optical depths (and single scattering albedos) in each layer of the atmosphere,
+ as well as a composite phase function.
 
- {\it Dors1} can build
-the atmosphere in two entirely different ways. It can build an arbitrary atmosphere
-or a model of the Earth's atmosphere. The arbitrary atmosphere is determined
-completely by the user, so we shall mainly consider
-building up a layered Earth atmosphere from realistic data. 
-
+The  {\it Dors1} program is designed to build a data file representing the Earth's atmosphere under various conditions.
+The options the user has for user defined atmospheric properties mean that if the user wishes
+to build an atmosphere very different from that found on Earth, this can be done.
+This document's emphasis is on 
+building up a layered Earth atmosphere and its optical properties from realistic data. 
 The data used by {\it Dors1} are based on
 the 1976 U. S. Standard Atmosphere \footnote[1]{All the references to the the U. S. Air Force
-Geophsical library are available from http://www.dtic.mil/dtic/}  \cite{USStandard:Mybib} and its suplements, especially the AFGL constituent
+Geophysical library are available from http://www.dtic.mil/dtic/}  \cite{USStandard:Mybib} and its supplements, especially the AFGL constituent
 profiles up to 120km \cite{ConstProfs:Mybib}.
 
-The best thing to do when first using {\it Dors1}  is to just type {\it Dors1 -v [ENTER]} at a system terminal.
-(If you are used to the command line, then hitting the [ENTER] key is obvious, and we omit
+The best thing to do when first using {\it Dors1} (assuming you are in your {The-DORS} directory) is to just type {\it Dors1 -v [ENTER]} at a system terminal.
+(If you are used to the command line, then hitting the {\it [ENTER]} key is obvious, and we omit
 it in the rest of this article.)
 The { \it -v} stands for ``verbose mode". In this mode you will be prompted for all the required
 inputs. When {\it Dors1} has finished, it will write a record of what you entered 
  in the file named  {\it Dors1in.dat} (unless otherwise specified).  It isn't a bad idea to make a copy of this file to something 
 like {\it example.Dors1in.dat}.
-If, at some later stage, you wish to make a small modification, you can just edit the 
-input file. Once you have had some experience of the verbose input, making edits should be
-easy.
-Once you have edited {\it Dors1in.dat}
- you may just type {\it Dors1}. This will read {\it Dors1in.dat} and build a modified
+
+If at some later stage you wish to make a small modification to the atmosphere defined by your original input, you can 
+just edit the input file ({\it Dors1in.dat}) and run {\it Dors1} again --- but this time without the ``-v". If not in verbose
+mode {\it Dors1} will read its input from {\it Dors1in.dat}. 
+Once you have had some experience of the verbose input, making edits 
+to {\it Dors1in.dat} should be easy enough.
+So, after editing {\it Dors1in.dat} just type {\it Dors1}. This will read {\it Dors1in.dat} and build a modified
 atmosphere. If you have a different name for the input file, say {\it Dors1inX.dat}, just type
 ``{\it Dors1 Dors1inX.dat}" instead. 
 
-The following descriptions of the various options are rather dull, but will be handy to have alongside
-you when you run the programme. I have posted some online videos which should be a lot easier to
-follow on first using Dors1 \footnote[2]{Youtube video not yet done}.
 
-On typing {\it Dors1 -v} the first thing you will be prompted for is whether you want to build
-an Earth atmosphere or an arbitrary atmosphere. We shall look only at an Earth atmosphere
-for most of this article, so for now, we always give the number 1 as a response. 
+The following descriptions of the various inputs and options make rather dull reading, but this part of
+the document will be handy to have alongside
+you when you run the program. Also, see some on-line videos which explain 
+ {\it Dors1, Dors2} and {\it Dors3} \footnote[2]{Youtube video not yet done}.
+
+\subsection{Wavelengths}
+
+So, let's start a ``run through" of {\it Dors1} -v.
+On running {\it Dors1 -v}, the first information that you will be asked to enter concerns wavelengths.
+For most practical purposes some wavelength range is needed rather than just a single wavelength. It
+is quite often the case that we need to predict an instrument response, and this requires some
+model of an instrument.
+
+The very first thing we are prompted for is to whether we are using an {\it instrument response function} or not.
+What does this mean?  If we are modelling atmospheric radiation measurement by some specific real-world 
+instrument,  it will have  a wavelength dependent response. We must specify that response function in a data file
+ (the default name for this file is $myresp.dat$). If we are {\it not} modelling an instrument
+ we can just enter two wavelengths covering some range. If we enter 1 as a response to this last prompt {\it Dors1} will
+need a response function file. For now, just enter zero. Since no response file is to be read, 
+we are prompted for a start and end wavelength. The response function is then assumed to be constant between those two 
+wavelengths and zero outside this range (a ``top-hat" function). If we want to look at the wavelength
+range 0.6 to 0.70 micrometres, we enter the smaller wavelength ($\lambda_1)$ of 0.60 first, and the larger
+wavelength ($\lambda_2)$ of 0.70 second. 
+
+If, for some small range of wavelengths, there are no sharp absorption  features due
+ to molecular absorption lines, we can in effect use just a single wavelength (by setting $\lambda_2=\lambda_1$).
+By small, we mean that the wavelength range is
+small enough so that the aerosol phase function, single scattering albedo, and optical depth,
+ and the Rayleigh scattering optical depths do
+ not change in any significant way over the wavelength region. 
+
+Unfortunately, whenever there are many sharp features such as molecular absorption lines over a given wavelength
+range, we cannot use a single wavelength approximation.
+This means much heavier computation.
+The {\it Dors} uses a correlated-$\kappa$ approach in this case. 
+Detailed explanations of the correlated-$\kappa$ approximation are given in \cite{GoodyWest:Mybib}, 
+\cite{LacisOinas:Mybib}, \cite{FuLiou:Mybib}, and \cite{RoseKratz:Mybib}. 
+Band models are an alternative \cite{GoodyYung:Mybib} \cite{Liou:Mybib},
+and when multiple scattering calculations are required, these can be converted
+to correlated-$\kappa$ distribution functions \cite{Goody:Mybib}, \cite{Domoto:Mybib}, and
+ \cite{GodsalveBand:Mybib}. The {\it Dors} doesn't use band models, and {\it Dors1} tailors the correlated-$\kappa$ method 
+ to the  instrument response function (which is set to a top-hat if we only specify a wavelength range and don't use a response function file). 
+
+In the non-verbose mode, if you are using an instrument response file not called {\it myresp.dat}, just 
+type ``{\it Dors1 Dors1inX.dat Xresp.dat}" where {\it Xresp.dat} is whatever
+your response function file name is. (Note in this case you need to specify a {\it Dors1in} file {\it and} a response function
+file in that order.) When running {\it Dors1} in verbose
+mode, the response function file name {\it must} be {\it myresp.dat}. 
+
+ The {\it myresp.dat}  file  shall
+consist of one line specifying the number of points $n$,
+ followed by $n$ lines consisting
+of wavelength-response function pairs. The wavelengths $\lambda_1$ and $\lambda_2$ will be
+ set to the first and last wavelengths in this file, even if the
+ response function is zero at these wavelengths.
+Cubic splines shall be used to interpolate the response function, so make sure that the number $n$ isn't
+too small for the given response function.
+
+The following {\it myresp.dat} file is valid, and will be identical to using a wavelength 
+range of $0.6\mu m$ to $0.7 \mu m$ without a response function file. 
+
+\begin{verbatim}
+5
+0.6   10
+0.625 10
+0.65  10
+0.675 10
+0.7   10
+\end{verbatim}
+
+The rest of the wavelength information that needs to be input concerns molecular spectroscopy. Reading
+in the required files and doing all the calculations 
+is generally a fairly intensive task, and these calculations can be avoided when possible. If, for instance
+we have built an atmosphere, and now need a new one  --- are the spectrospcopic calculations necessary?
+If we are only changing aerosol loading or some other thing that will not affect
+the molecular absorption, then the answer is no. Also, we may know in advance that molecular absorption is negligible
+ for our wavelength range or purposes --- and so needn't bother with the extra computing time reading in all the files and computing the spectra.
+
+
+The next input we are prompted for is to whether to calculate molecular absorption spectra or not.
+If we have made a run of {\it Dors1} already, with this value set to 1, it will have output the
+correlated-$\kappa$ data required by {\it Dors3} in a separate file. 
+We may not wish to re-do these calculations and over-write that file for reasons discussed later.
+For now enter 1 as a response. If we are doing these calculations, we may want to examine the fine
+detailed spectra rather than just the few $\kappa$ values needed for the correlated-$\kappa$ method.
+We are prompted as to whether we want this output or not. For now, enter zero.
+
+
+We mentioned already that we are using a correlated-$\kappa$ approach, and this needs a quadrature rule
+for integrating over the cumalative-$\kappa$ distribution function. We do this using Gauss quadrature, and the
+next prompt is for the order of quadrature rule. Enter 10, say.
+
+Now we are at the last part of the wavelength input. We change over to the more usual spectroscopic units
+of {\it per cm} or $cm^{-1}$. So $10^3 cm^{-1}$ corresponds to $10\mu m$ radiation, $10^4 cm^{-1}$ corresponds
+to 1$\mu m$ radiation, and so on. So, if we denote the wave number as $\nu (cm^{-1})$ and the wavelength as $\lambda (\mu m)$
+then $\nu=10^4/\lambda$. We make the trivial observation that $d \nu/\nu=-d \lambda / \lambda$.
+
+The molecular absorption calculations need a ``cut-off" which tells
+the program how far away from on an absorption line centre we need to calculate the absorption profile
+of the absorption line. It also needs a spectroscopic resolution (or step size) for the wavelength interval.
+We are prompted for these in turn. For now use $5 cm^{-1}$ for the cut-off, and $0.05 cm^-1$ for the step size.
+
+\subsection{Layers and Aerosols}
 
 {\it Dors1} splits up the Earth's atmosphere into four distinct regions.
 These four different regions are needed because of
  different  atmospheric aerosol types. In the lower
-kilometer of atmosphere or so we may have different types of boundary layer
-aerosols in addition to the background tropospheric aerosols. From a couple of kilometers
+kilometre of atmosphere or so we may have different types of boundary layer
+aerosols in addition to the background tropospheric aerosols. From a couple of kilometres
 up to the stratosphere, we have  just the background tropospheric aerosols, and in the stratosphere we may have
 volcanic aerosols. The aerosols in the atmosphere above the stratosphere are different again.
 These regions follow the example of an old atmospheric radiation code called {\it LOWTRAN 7}
@@ -96,126 +200,56 @@ of different molecular species.
 In order to capture this, we must subdivide the atmosphere into ``slabs" where the temperature and
 the pressure do not vary too much. The need for the aerosol regions is less in the thermal infrared
 than the other spectral regions, but in the {\it Dors}  the four aerosol
-layers are used throughout the full spectral range and can be split into smaller sub-layers. 
+layers are used throughout the full spectral range: each can be split into smaller sub-layers. 
 
-So, let us have a ``run through" of {\it Dors1} -v. Recall that the  first question was as to
-whether you want an Earth
-atmosphere or some other, perhaps arbitrary, atmosphere. We have entered the number one to select
-an Earth atmosphere. The next question concerns how we are to enter the amount of tropospheric
+So, let's  continue with  our ``run through" of {\it Dors1} -v.
+ The next question we are prompted with  concerns how we are to enter the amount of tropospheric
 and boundary aerosol. We are asked whether we want to enter optical depths or visibilities.
 
-If we have estimates of the optical depths of the upper
-troposphere and the boundary layer then we can choose the option to enter these optical depths.
-Otherwise we may enter a ``visibility" (or more accurately a {\it meteorological range}) in kilometers.
-The more aerosol there is, the lower the visibility. On a very clear day we can see tens of kilometers.
- On a very hazy day, things that are only a couple of kilometers away are obscured by haze. In
-this way, the we have a fairly intuitive grasp of what kind of values to enter. If visibility
-is chosen, then the actual optical depth is calculated via Koschmieder's empirical formula
+If we have estimates of the aerosol optical depths of the upper
+troposphere and the boundary layer (at a wavelength of $0.55\mu m$) then we can choose the option to enter these optical depths.
+Otherwise we may enter a ``visibility" (or more accurately a {\it meteorological range}) in kilometres.
+The more aerosol there is, the lower the visibility. On a very clear day we can see tens of kilometres.
+ On a very hazy day, things that are only a couple of kilometres away are obscured by haze. In
+this way, the we have a fairly intuitive grasp of what kind of values to enter. If
+ visibility
+is chosen, the actual aerosol optical depth  is calculated via Koschmieder's empirical formula \cite{Koschmeider:Mybib} 
  as used in \cite{Longtin_etal:Mybib} for example.
-In fact, this formula gives the optical depth at a wavelength of 0.55$\mu m$. The optical
+In fact, this formula gives the aerosol optical depth at a wavelength of 0.55$\mu m$. The aerosol optical
 depth at other wavelengths will be worked out from the combination of aerosol models used.
-Again, we discuss this in detail later.
-
-At this point we must give {\it Dors1} wavelength information. What you need to do is enter
-two  wavelengths covering a range. That is, suppose we want to look at the wavelength
-range 0.6 to 0.70 micrometres, we enter the smaller wavelength ($\lambda_1)$ of 0.60 and the larger
-wavelength ($\lambda_2)$ of 0.70. These two wavelengths can be the same if the user chooses them to
- be so, and in this case  {\it Dors1} will output the necessary data for a single wavelength calculation.
- However for many
-practical purposes some kind of wavelength range is needed. 
-
-If, for some small range of wavelengths, there are no sharp absorption  features due
- to molecular absorption lines, we can use just a single wavelength. (I.e. set $\lambda_2=\lambda_1$.)
-By small, we mean that the wavelength range is
-small enough so that the aerosol phase function, single scattering albedo, and optical depth,
- and the Rayliegh scattering optical depths do
- not change in any significant way over the wavelength region. We return to this
-topic later.
-
-Unfortunately, whenever there are many sharp features over a given wavelength
-range, such as molecular absorption lines, we cannot use a single wavelength approximation.
-This means much heavier computation.
-The {\it Dors} uses a correlated-$\kappa$ approach in this case. 
-Detailed explanations of the correlated-$\kappa$ method are given in \cite{GoodyWest:Mybib}, 
-\cite{LacisOinas:Mybib}, \cite{FuLiou:Mybib}, and \cite{RoseKratz:Mybib}. 
-Band models are an alternative \cite{GoodyYung:Mybib} \cite{Liou:Mybib},
-and when multiple scattering calculations are required, these can be converted
-to correllated-$\kappa$ distribution functions \cite{Goody:Mybib}, \cite{Domoto:Mybib}, and
- \cite{GodsalveBand:Mybib}.
-The {\it Dors} does not use
-band models, and {\it Dors1} taylors the correlated-$\kappa$ method to an instrument response
-function specified by the user. The response function data should be in a separate file.
- The the default name  for the file is {\it myresp.dat}.
-
-If you have a different name for the response function data file, just 
-type ``{\it Dors1 Dors1inX.dat Xresp.dat}" where {\it Xresp.dat} is whatever
-your response function file name is. When running {\it Dors1} in verbose
-mode, this file {\it must} be {\it myresp.dat}. (When calling the {\it Dors} via shell scripts it will be useful to have different input file names,
- but you would hardly write a script running verbose mode, would you?)
-
- The {\it myresp.dat}  file  shall
-consist of one line specifying the number of points $n$,
- followed by $n$ lines consisting
-of wavelength-response function pairs. The wavelengths $\lambda_1$ and $\lambda_2$ must be
-the first and last wavelengths in this file, even if the
- response function is zero at these wavelengths.
-Cubic splines shall be used to interpolate the response function, so make sure that the number $n$ isn't
-too small for the given response function.
-
-Note that this use of splines excludes response functions with sharp discontinuities in the first 
-derivative w.r.t. wavelength.  A triangular form, for instance, should be split up into two separate 
-problems for {\it Dors1}, and then combined at the end. (No real instrument has a truly triangular form, putting in
- a few extra points 
-around the sharply curved peak of a response function that is almost triangular is a good idea.)
-
- There must be at least two wavelengths between $\lambda_1$ and $\lambda_2$ (unless they are equal).
-The response function should integrate to unity
-between the two specified wavelengths. (It shall be normalised within {\it Dors1} if
-it doesn't integrate to unity, and a warning will be output, this might indicate that the number
-of points $n$ is too small for the response function for instance.) 
-
-Now, you may not have any instrument in mind. If, for instance, you want to know the Top Of Atmosphere (TOA)
-reflectance of a model atmosphere rather than model an instrument's measurement of it, what do you do?
-In this case you specify just enter a constant value for the response function. It should be equal
-to $1/(\lambda_2-\lambda_1)$. (It will be normalised internally anyway, just in case.) 
-A valid {\it myresp.dat file} for $\lambda_1=0.6$ and $\lambda_2=0.7$ follows.
-\begin{verbatim}
-5
-0.6   10
-0.625 10
-0.65  10
-0.675 10
-0.7   10
-\end{verbatim}
-
-After you have entered the two  wavelengths $\lambda_1$ and $\lambda_2$, you are prompted to enter how many sub-layers layers each of
+Again, we discuss this in detail later. Also, for each layer, we need the Rayleigh optical depth due to molecular scattering,
+and a different set of optical depths for water vapour and trace gases. In order to describe non-grey molecular absorption,  we 
+need a {\it set} of optical depths/extinction coefficients {\it for each molecular absorber}. The number of
+coefficients in each set is determined by the order of Gauss quadrature already entered for integration over
+ cumulative-$\kappa$ distributions.
+ 
+Next, you are prompted to enter how many sub-layers layers each of
 the four main aerosol regions are to be split into. If you just want just one slab for
 each aerosol region, enter 1 for each region. You can choose any number of slabs for
 each aerosol region you like. Note that this also affects the molecular spectra used
-because of temperature and pressure variations of the absorption line widths. You need to
-gain experience of how this affects the radiation calculations. At this point I must mention
+because of the temperature and pressure variations of the absorption line widths within the four main
+aerosol regions. You need to
+gain experience in how fine a height resolution of the atmosphere you need and how this resolution
+ affects the radiation calculations. At this point we must mention
 that the layers are not split up into slabs of equal physical thickness. They are split up
-so that the pressure change across each sublayer is the same. This is because we want the molecular
-absorption properties to be as even as possible in each sub-layer.
+so that the pressure change across each sublayer is the same.
 
 The next input you are prompted for is to choose between Spring/Summer or Autumn/Winter. 
 This affects what atmosphere numbers
 (from 1 to 7) you are prompted to choose from next. Later, it affects which tropospheric and
-upper atmospheric aerosols you are prompted for. An explanation of the which numbers you can choose
-from is written to the standard output.
+upper atmospheric aerosols you are prompted for. An explanation of which numbers you can choose
+from and what they mean is written to the standard output.
 
 
 There are  6 pre-defined atmospheres,  and the possibility of having a ``user defined" atmosphere.
-The six pre-defined atmospheres numbered 1 to 6 respectively, are tropical, mid latitude Spring/Summer and Autumnn/Winter, and 
+The six pre-defined atmospheres numbered 1 to 6 respectively, are tropical, mid latitude Spring/Summer and Autumn/Winter, and 
 sub-Arctic Spring/Summer or Autumn/Winter, and finally
 the U. S. 1976 standard atmosphere. 
 Atmosphere numbers 1, 6, and 7 are tropical, standard, and user defined, and these are independent of season.
 
-Now, if we do not use tropical, standard, or user defined, the tropospheric 
-and stratospheric aerosol models are 
-dependent on the season.
- If you have chosen Spring/Summer or Autumn/Winter, 
-1, 6, and 7 are still available. 
+Now, if we do not use season independent atmospheres, the tropospheric 
+and stratospheric aerosol models are dependent on the season.
+ If you have chosen Spring/Summer or Autumn/Winter, 1, 6, and 7 are still available. 
  If you have chosen
 Spring/Summer, atmospheres 2 and 4 are available, otherwise atmospheres 3 and 5 are available.
 These are the four allowed variations on mid-latitude, sub-Arctic, and Spring/Summer and Autumn/Winter.
@@ -246,49 +280,61 @@ pre-defined profiles to take this into account. You are prompted as to whether y
 and/or temperature data. You will be prompted further if you say you do. If you enter
 your own ground pressure that is say, 1.05 times the pressure at the ground
 in the chosen profile, this will scale the entire column pressure by 1.05. If you enter a ground
-temperature, this will just change the ground temperature in the temperature profile. For now, just
+temperature, then the temperature at the ground ($T[0]$ is changed to $groundTemp$, and the
+temperature at 1km ($T[1]$ is set to $[T[1]*groundTemp/T[0]$  --- all other temperatures are unchanged. For now, just
 enter zero so that the pre-defined profiles are unchanged.
 
 It is envisaged that you might want to use the {\it Dors} to simulate aircraft remote sensing
 experiments as does 6S \cite{6S:MyBib}. The radiative transfer calculations are all done
 in terms of optical depth, so {\it Dors1} will need to find where the aeroplane is
 in terms of optical depth as calculated from the aeroplane height (above Sea level). If you select
-aeroplane remote sensing (1) you are prompted for a height. Select zero for now.
+aeroplane remote sensing you are prompted for a height. Select zero when prompted as to whether you want to do
+aeroplane remote sensing for now.
 
 Other things that may vary are the height of the ground, the thickness of the boundary layer,
  the height of the troposphere, and so on. You are next prompted as to whether you want to
 use the default heights or enter your own. For now select the default.
 
-The last things that we are prompted for is the orders of the two separate gauss quadrature rules.
-The first is the usual Gauss-Legendre rule that calculates integrations in height in each sub-layer of each
-aerosol region. The other one is for the Gauss-Hermite rule for integrations over the Voigt profiles
-of the absorption lines.
- these are two other things that you need to experment with. For now, just choose 4 and 16.
+The last thing that we are prompted for is the order of the 
+ Gauss-Legendre rule that calculates integrations in height in each sub-layer of each
+aerosol region. 
+You will need to experiment with how the results vary with the order of the quadrature rule. For now, just choose 4.
 
-We have now finished the input for {\it Dors1}, and  we have a record of the input in
+So, we have finished our first run-through of {\it Dors1 -v} and this has created a record of our input in
  {\it Dors1in.dat}. Look at the following example.
 \begin{verbatim}
-1 
-1 45.000000 26.000000
-0.500000 0.600000 
-1 2 3 4
+0.500000 0.600000 0 
 1
+10
+5.000000 0.050000
+1 40.000000 20.000000
+1 2 3 4
+2
 0 0
 13 6 3 1 0
-1 0 -1000000.000000 -1.000000
+1 0 0 -1000000.000000 -1.000000
 0 -1000000.000000
 1 0.000000 2.000000 10.000000 30.000000 120.000000
-4   16 
+4
 \end{verbatim}
-In the first line, we have chosen an Earth atmosphere. Then we see we have chosen
-to enter visibilities,  and have chosen a tropospheric visibility of 45km and a boundary layer visibilty
-of 26km. Our start wavelength is 0.5$\mu m$ and our stop wevaelength is $0.6 \mu m$. The
+In the first line, we have $\lambda_1$, $\lambda_2$, and the bool which tells us whether
+we are using a response function file. If we are using a response function, the two wavelengths
+will be reset by the first and last wavelengths in the response function file, but two dummies are still required as input in
+{\it Dors1in.dat}. The 1 on the next line tells us that we are to calculate new molecular absorption
+files and not use the results of any previous calculation. The 10 on the next line tells us that we are using
+10 point Gauss quadrature for the integration over the cumulative-$\kappa$ distribution for calculating non-grey 
+radiative transfer. The next line ends the wavelength related inputs, and tell us we have a cut-off of $5 cm^{-1}$
+ and a step size of $0.05 cm^{-1}$.
+
+ The next line has three numbers. The 1 tells us we have chosen to
+ use visibilities,  and have chosen a tropospheric visibility of 40km and a boundary layer visibility
+of 20km. The four numbers on the next line says that the 
 upper atmosphere is just 1 slab. The stratosphere is split into two slabs, the upper
-troposphere is split into three slabs and the boundary layer is split into four. I remind
-you that the splitting ensures that the pressure change across each sub-layer of an
+troposphere is split into three slabs and the boundary layer is split into four. Recall 
+that the splitting ensures that the pressure change across each sub-layer of an
 aerosol layer is constant, the physical thicknesses are not constant.
 
-The single number on the next line is 1 because a tropical atmosphere was chosen.
+The single number on the next line is 2 because a mid latitude spring/summer was chosen.
 The first zero on the next line indicates Rayleigh scattering is not turned off, and
 the second indicates that aerosol scattering is not turned off.
 
@@ -304,9 +350,9 @@ The troposphere type number is set
 internally and will be 
 be 3 for Spring/Summer and 1 for Autumn/Winter. In non verbose mode it must be set by the input file.
 Make sure that it is set with to 1 or 3 according to Autumn/Winter or Spring/Summer. 
-So the number 3 indictes we have chosen Spring/Summer. After this we have the boundary layer type.
+So the number 3 indicates we have chosen Spring/Summer. After this we have the boundary layer type.
 The value of 1 indicates ``rural".
-What is that zero at the end? If we chosen the ``Maritime/Ocean" option we would have
+What is that zero at the end? If we had chosen the ``Maritime/Ocean" option we would have
 been prompted for which of the two this was. A number has to be there regardless of what option
 we choose for the boundary layer. If we choose 3 for the boundary layer option, this last number is
 either 1 for open Ocean, or 0 for Maritime.
@@ -316,16 +362,17 @@ Note that there is no mention of what choice we have made for the season. When r
  information only determines later prompts.
 
 The next line indicates that we have chosen 1 when prompted as to whether or not
-the default water vapour prifiles, and so shall use the default water vapour profiles. We chose 0 
-when asked if we had pressure or temperature data.
+the default water vapour profiles, and so shall use the default water vapour profiles. We chose 0 
+when asked if we had either ground pressure and/or temperature data 
+so the bools groundP and groundT are initialised as false.
  This indicates that  we have no information  on either temperature or pressure. 
-On the same line as these options (1 and 0) 
+On the same line as these options (1, 0, 0) 
 are two (silly) numbers for
 temperature and pressure. These have to be there regardless, even though we have no information
 on temperature and pressure. Because we have entered 0 for the option, they won't be used.  
 (Make them negative to make it obvious they are not to be used.)
 Similarly, the next line has a zero to indicate that we are not simulating an aeroplane.
-Nevertheless, we must include an aeroplane  height on this line.  Again we have made a large negative
+Nevertheless, we must include an aeroplane  height on this line.  Again we have made it a large negative
 value to make it clear it isn't used in this case.
 
 The next line starts with a 1, indicating that we are using the default heights for
@@ -333,10 +380,9 @@ the ground, the boundary layer, tropopause, stratopause, and Top Of Atmosphere (
 This is followed by four numbers. If you have chosen the defaults, these numbers will be
 the default values of 0, 2, 10, 30, and 120.
 
-The last line is the order of the Gauss-Legendre and Gauss-Hermite  quadrature rule for integrations
-over height and Voigt profile.
-So, we have finished our ``run through" of {\it Dors1}. Next we shall begin to see what {\it Dors1}
-actually does.
+The last line is the order of the Gauss-Legendre quadrature rule for integrations
+over height which is 4. So we have finished our ``run through" of {\it Dors1}. Now we know what to input, and what it means, we
+can begin to see what {\it Dors1in.dat} actually does and how it does it.
 
 \section{The Atmospheric Data}
 
@@ -359,9 +405,9 @@ in table 1 below.
 The height
  dependence of all the other atmospheric constituents are just those of the 1976 standard.
  So, to take methane as an example, we have the atmospheric concentration in $ppmv$ contained
-in {\it Mols1\_CH4.dat} to {\it Mols6\_CH4.dat} and {\it MolsU\_CH4.dat} corresponding to
+in {\it Mols1\_CH4.dat} to {\it Mols6\_CH4.dat} and {\it MolsU\_CH4.dat}. These correspond to
 methane for the 6 standard atmospheres and a user defined atmosphere.
-The concentrations of gases such as methane are highly variable, so the user defined option
+The concentrations of gases such as methane are highly variable, so --- apart from water vapour --- the user defined option
 is there mostly for CO, O3, N2O, and CH4. 
 
 Water vapour is the most variable of all. 
@@ -382,9 +428,16 @@ This accounts for gases 1-7. What about the rest? Are these highly variable?
  To quote \cite{ConstProfs:Mybib} ``{\it Molecules 8-28 are provided
 as single representative profiles. Their natural variability can be very different from the selected 
 profiles.}" If, for instance you want to experiment with the profiles, just overwrite the ones provided
-with your own! The {\it Atmospheres} directory contains a subdirectory called {\it StartMols}. This contains
+with your own! The {\it Atmospheres} directory contains a sub-directory called {\it StartMols}. This contains
 a copy of all the profiles that {\it Dors1} came with originally. Once you have finished, you can just reset 
  the profiles you have experimented with according to the originals. 
+
+The temperature and pressure profiles
+for the six AFGL atmospheres, along with the atmospheric profiles of the gas concentrations for 28 gases
+including the atmosphere dependent ones can be seen in Appendix A. Note we have missed out profiles
+for Nitrogen, Oxygen, and CO2 for obvious reasons. (Just replace {\it Mols\_CO2.dat} if you are interested in
+varying CO2 concentration: the default concentration is out of date.)
+
 
 \begin{table}
 \begin{center}
@@ -395,7 +448,7 @@ Number & Molecule & Name & Number & Molecule & Name \\ \hline
 2 & CO2 & Carbon dioxide & 16 & HBr & Hydrogen Bromide\\ \hline
 3 & O3 & Ozone & 17 & HI & Hydrogen iodide \\ \hline
 4 & N2O & Nitrous oxide & 18 & ClO & Chlorine monoxide \\ \hline
-5 & CO & Carbon monixide & 19 & OCS & Carbonyl sulphide\\ \hline
+5 & CO & Carbon monoxide & 19 & OCS & Carbonyl sulphide\\ \hline
 6 & CH4 & Methane   & 20 & H2CO & Formaldehyde \\ \hline
 7 & O2 & Oxygen & 21 & HOCl & Hypochlorous acid\\ \hline
 8 & NO & Nitric Oxide & 22 & N2 & Nitrogen\\ \hline
@@ -404,7 +457,7 @@ Number & Molecule & Name & Number & Molecule & Name \\ \hline
 11 & NH3 & Ammonia & 25 & H2O2 & Hydrogen peroxide\\ \hline
 12 & HNO3 & Nitric acid & 26 & C2H2 & Acetylene\\ \hline
 13 & OH & Hydroxyl radical & 27 &  C2H6 & Ethane \\ \hline
-14 & HF & Hydrogen Fluoride & 28 & PH3 & Phosphene\\ \hline
+14 & HF & Hydrogen Fluoride & 28 & PH3 & Phosphine\\ \hline
 \end{tabular}
 \caption{The 28 AFGL Gaseous Constituents}
 \end{center}
@@ -412,20 +465,22 @@ Number & Molecule & Name & Number & Molecule & Name \\ \hline
 
 We are using the HITRAN \cite{RothmanETAL:Mybib} database to calculate molecular absorption.
 This includes 14 extra gases numbered 29 to 42.
-I have no idea as to what the concentations of these extra constituents should be as a function of height
+I have no idea as to what the concentrations of these extra constituents should be as a function of height
 , however I have
 included ``dummy" profiles for the extra gases included in HITRAN. Most likely, you won't
 bother with  them. In fact I have included the possibility that you have data on gases not
 in the HITRAN database. these 8 extra ``dummy" gases are numbered 43-50, and you need to overwrite the
-``dummy data" contained in these files with your own. Again, I should think it quite rare
+``dummy data" contained in these files with your own. Not only that, you need to add your own ``par" files
+to the {\it HITRAN} subdirectory of your {\it The-DORS} directory. Obviously, these must be written in the standard  {\it HITRAN} format.
+Again, I should think it quite rare
 that this feature would be useful, but it is included nevertheless.
 \begin{table}
 \begin{center}
 \begin{tabular}{|c|c|c|c|c|c|}
 \hline
 Number & Molecule & Name & Number & Molecule & Name \\ \hline
-29 & COF2& Carbonyl Flouride & 36 & NO+& Ionised Nitric oxide\\ \hline
-30 & SF6 & Sulpher Hexaflouride & 37 & HOBr & Hypobromous acid \\ \hline
+29 & COF2& Carbonyl Fluoride & 36 & NO+& Ionised Nitric oxide\\ \hline
+30 & SF6 & Sulphur Hexaflouride & 37 & HOBr & Hypobromous acid \\ \hline
 31 & H2S & Hydrogen sulphide & 38 & C2H4& Ethylene \\ \hline
 32 & HCOOH & Formic acid&  39 & CH3OH & Methanol\\ \hline
 33 & HO2 & Hydroperoxyl radical& 40 &CH3Br & Methyl Bromide\\ \hline
@@ -436,7 +491,7 @@ Number & Molecule & Name & Number & Molecule & Name \\ \hline
 \end{center}
 \end{table}
 So, gases 1-11 are the LOWTRAN gases. Gases 1-28 are the AFGL gases, and gases 
-29-42 are the HITRAN gases. We have slots for extra gases numbered 43 to 50.
+1-42 are the HITRAN gases. We have slots for extra gases numbered 43 to 50.
 
 Many of the gases are negligible as far as the absorption of radiation is concerned.
 In these cases the HITRAN data are useful for atmospheric chemistry.
@@ -450,8 +505,8 @@ Any of the gases 1-10 with a zero below it will be ignored altogether. Obviously
 are provide the mask for gases 11 to 50.
  Only those gases that
 have a corresponding 1 will be used when running the {\it Dors}.
- For many purposes, only the first seven gases should have be used, depending on the wavelength.
-I have included the wavelength dependence on all the gases in a separate document.
+ For many purposes, only some of the first seven gases need be used for atmospheric
+radiation purposes, the choice depending on the wavelength interval.
 
 \section{Integrations}
 
@@ -465,8 +520,8 @@ atmosphere is shown schematically in Fig.1 below.
 \begin{figure}[htb]
 \special{psfile=Fig1.eps voffset=.0 hoffset=50.0 hscale=50 vscale=50}
 \caption{A schematic diagram of the vertical structure of the atmosphere
-as split up by {\it Dors1}. These values of {\it nsplit} are yield 11 radiative
- numbered top down.}
+as split up by {\it Dors1}. These values of {\it nsplit}  yield 10 radiative
+layers  numbered top down.}
 \end{figure}
 
 The altitudes are stored in the array {\it altitude}, and the corresponding
@@ -481,9 +536,9 @@ of each slab (from the ground up) so that the pressure intervals across each
 array {\it floorpress}. The height is then interpolated as a function of pressure
 so that the physical heights of each slab's ``floor" can be found. These
 are stored in the array {\it Heightfloors}. So if the atmosphere is split as in
-Fig.1, there are eleven ``floors". The physical thickness of each of these slabs
+Fig.1, there are ten ``floors". The physical thickness of each of these slabs
 is stored in an array called {\it SlabThick}. The distances are all now in metres
-rather than kilometers, and everything is still ``ground-up".
+rather than kilometres, and everything is still ``ground-up".
 
 The Gauss-Legendre quadrature weights and abscissae on the interval [0,1] are found, and using
 these, {\it Heightfloors} and {\it SlabThick}, we find the height of each quadrature point 
@@ -499,8 +554,9 @@ so to use any formula requiring Pascals, we multiply by 100. To get the number o
 particles  $N$ per cubic metre, we multiply the number of moles per cubic metre by Avagadro's number $A_v$.
 That is we use
 \begin{equation}
-N= \frac{ 100 P(mbar) A_v}{RT}.
+N= \frac{ 100 P(mbar) A_v}{RT},
 \end{equation}
+ where $A_v$ is Avogadro's number.
 For the purposes of this article, I use the old fashioned term ``molecular weight" to mean
 the same thing as the more correct {\it molar mass} in grammes per mole. I have named the
 molecular weight of air as $MWA$. To get from the number density to the density $\rho$
@@ -509,7 +565,7 @@ molecular weight of air as $MWA$. To get from the number density to the density 
 \rho=\frac{N \times MWA}{1000 A_v}.
 \end{equation}
 The 1000 in the denominator is to convert from grammes to Kilogrammes. So for each height
-in the array {\it heights} we have a corresponding value $N$ stored in the array $N$.
+in the array {\it heights} we have a corresponding value $N$ stored in an array named $ENN$.
 
 Now, recall we had a file called {\it GasMask.dat}. If $ngas$ of these 50 molecules
 are not masked out, each of the corresponding molecular mixing ratio files are opened and the
@@ -517,7 +573,7 @@ data is read in. (These files are all stored in the $Atmospheres$ directory and 
 file names begin with ``Mols".  Every file (including the temperature and pressure data) has
 an integer $idata$ describing the number of altitudes ({\it i\_altitudes}). If it does not match the value
 for {\it i\_altitudes}, then {\it Dors1} will exit with a non zero return value. So, if {\it
-Dors1} exits successfuly, then $idata$ and {\it i\_altitudes} are one and the same.
+Dors1} exits successfully, then $idata$ and {\it i\_altitudes} are one and the same.
 So $ngas$ of the molecular data files are opened, and the height profile in parts per
 million is read in. Some of these will depend on the atmosphere number chosen in the
 input. 
@@ -530,7 +586,8 @@ because some aerosol models are humidity dependent.
  So, we must calculate the humidity from the temperature and pressure
 profiles at the heights in {\it altitudes}. In fact we calculate two humidity
 profiles. One is the humidity for water vapour in contact with a plane parallel surface
-of liquid water and the other over ice. These profiles are contained in the arrays {\it Hum1}
+of liquid water and the other over ice \footnote{The author is aware of the shortcomings
+of this approximation, but this will not be dealt with in this release of {\it The-DORS}}. These profiles are contained in the arrays {\it Hum1}
 and {\it Hum2}. Two more arrays, {\it Humids1} and {Humids2} are found by interpolation
 onto the {\it heights} grid. These are calculated using a method due to
 Buck \cite{ArdenBuck:Mybib}·
@@ -543,7 +600,50 @@ database. If you have $ngas$ gases for which the mask value is one, the array
 {\it MWGAS[ngas]} will contain the molecular weights of the gases not ``masked out".
 Along with this array, we have the  2D array $GasPPM[idata][ngas]$. All this information
 allows us to calculate the mean temperature and pressure in the each slab of atmosphere
-and the mass of each molecular species per unit area with each slab.
+and the mass of each molecular species per unit area within each slab.
+
+We have other data in that the molecular species have different isotopes for their constituents.
+ The largest number of these {\it isotopologues} is for CO2 which has ten variations.
+The number of isotopologues for each species is stored in an array called {\it nice} which
+is read in from the file {\it Atmospheres/AllIsos.dat}.
+
+In your {HITRAN} directory you have a copy of {\it molparam.txt}. For each isotopologue
+we read in the arrays {\it nicecode[i][j]}, the isotopologue code; {\it AllMolW[i][j]}, the molecular
+weight; {\it niceabund[i][j]}, the isotopologue abundance; {\it geejay[i][j]}, the state independent 
+statistical weight; and {\it QT[i][j]}, the partition sum at 296K. I have set an integer {\it nicemax}
+to two, so that only the two most common isotopologues are considered. You may want to edit
+{\it Dors1.cpp} and set it to one, or increase it.
+
+
+\section{Including the Spectra}
+
+Having read in the atmospheres, the Dors starts doing vertical integrations and calculating
+the Rayleigh optical depths and the masses of each gas in the all the sub-slabs. This
+means that we need the HITRAN data. We need to go back to the run-through of {\it Dors1}.
+The last thing we were prompted for was the order of the Gauss quadrature rule for the integration
+in each sub-layer.
+
+When running {\it Dors1} you may want to change only the aerosol component, or the ground reflectance.
+In this case we don't wish to recalculate the spectra and the correlated-$\kappa$ data. Recall we
+ were prompted as to whether or not we wanted to calculate molecular absorption.
+When {\it Dors1} writes the input for {\it Dors3}, it prints either the molecular absorption
+ data for a single wavelength,
+ or $\kappa$ values for the correlated-$\kappa$ approximation in a file separate from the other data necessary for
+{\it Dors3}. If we choose not to calculate the molecular absorption when running {\it Dors1}, then {\it Dors3} will read the previously
+existing file.
+Then {\it Dors1} doesn't need to re-read the HITRAN files and re-calculate k-distributions and so on.
+ You {\it must}
+say you will calculate molecular absorption on a first run for a given atmosphere  --- otherwise you
+will ``pick up" a stale correlated-$\kappa$file.
+
+So, on  a first run, always set this input to be 1 (unless your {\it GasMask} entries are all zero anyway).
+ You must also choose 1 if you change the pressure or
+temperature profiles, change {\it GasMask.dat}, or change the way that the aerosol regions are
+split into sub-layers. If the aerosols change and/or the ground reflectance changes from a previous atmosphere
+ choose 0. Of course, if you know that molecular absorption is negligible
+ or zero for your wavelength interval then set all the {\it GasMask} entries to zero in the first place.
+
+
 
 \section{Aerosol Models}
 
@@ -555,8 +655,7 @@ models and the extensive
 
 First, by aerosol, we mean any particulate matter suspended in the air. As such, this particulate matter can
 both scatter and absorb radiation. In general, many of these particles will not be spherical. 
-However, some aerosol paricles will be close to being spherical 
-under some circumstances. We  shall mainly use scattering from spheres as 
+However but we  shall use scattering from spheres as 
 a numerical model for aerosol scattering. 
 
 These spheres are to be 
@@ -633,14 +732,14 @@ This rural aerosol is a mixture, which is defined to be a non
  $0.05215=0.7 r_h+0.3 r_{dry}$. That is to say we might take the mode 
 radius of the dust (which doesn't grow with humidity) to be the same
  as the dry mode radius
-of the water soluble aerosol, and then take the mode radius of the agregate
+of the water soluble aerosol, and then take the mode radius of the aggregate
 to be a weighted sum of the swollen hygroscopic aerosol and the dry dust aerosol.
  In which case, we would have $r_h=0.06293 \mu m$
 for the small particle mode
  and $1.495 \mu m$
 for the large particle mode. (Incidentally, hygroscopic aerosols can display
 hysteresis \cite{Samparta:Mybib}, so knowledge of the humidity doesn't necessarily give
-us a handle on the size parameter.)
+us a perfect handle on the size parameter.)
 
 There is further confusion here: the hygroscopic aerosol is taken to be a mixture
  of ammonium sulphate, calcium sulphate, and ``organic matter". The complex
@@ -676,10 +775,10 @@ a function
 of the particle radius. This radius is in itself a function of the water
  activity. We have
 \begin{equation}
-a_w=H \exp \left ( -\frac{0.31469}{r(a_w) T)} \right).
+a_w=H \exp \left ( -\frac{0.31469}{r(a_w) T} \right).
 \end{equation}
-Here $H$ is the humidity scaled to (0,1), and  $T$ the absolute temerature, and $r$ is the particle
-size in micrometers.
+Here $H$ is the humidity scaled to (0,1), and  $T$ the absolute temperature, and $r$ is the particle
+size in micrometres.
 On top of this we have
 \begin{equation}
 r(a_w)= r_{dry}\sqrt[3]{1+\rho \frac{ m_w(a_w)}{m_{dry}}}
@@ -693,7 +792,7 @@ This is the resulting refractive index for a completely dissolved mixture.
 (Which is hardly possible for calcium sulphate.)
 
 So: it is not clear how Shettle and Fenn proceeded, but they say ``To reduce the
-calculatutions for the current models, which now are done as a function of
+calculations for the current models, which now are done as a function of
 humidity, the individual aerosol particles are considered to be a homogeneous
 mixture of the different types of substance - as many natural aerosols are. The
 resulting  refractive index for the composite rural aerosol is given
@@ -706,12 +805,109 @@ the water soluble or ammonium sulfate aerosol refractive index as a function of
 humidity.
 
 We shall proceed by using the aggregate refractive index and mode radius 
-provided by Shettle and Fenn, which we reproduce in the following pages. 
-As a note of caution, these data were typed on a bad typwriter in the original 
+provided by Shettle and Fenn, which we reproduce in the Appendix B. 
+As a note of caution, these data were typed on a bad typewriter in the original 
 data (some characters are difficult
 to read) and were entered manually by the author. Errors are quite possible, however
  that may be, they should not  not lead to
 large error in extinction coefficient as a function of wavelength.
+
+
+\newpage
+
+\appendix
+
+
+\section{Atmospheric Profiles}
+
+
+\vspace*{10cm}
+\begin{figure}[htb]
+\special{psfile=TempProfs.ps voffset=.0 hoffset=50.0 hscale=50 vscale=50}
+\caption{Temperature as a function of height for the 6 AFGL atmospheres.
+S.A. is sub-arctic, M.L. is mid-latitude, and we have S.S. for Spring/Summer
+and A.W. for Autumn/Winter.}
+\end{figure}
+
+\newpage
+\vspace*{10cm}
+\begin{figure}[htb]
+\special{psfile=PressProfs.ps voffset=.0 hoffset=50.0 hscale=50 vscale=50}
+\caption{Pressure (mbar) as a function of height for the 6 AFGL atmospheres.}
+\end{figure}
+
+
+\newpage
+\vspace*{10cm}
+\begin{figure}[htb]
+\special{psfile=H2OProfs.ps voffset=.0 hoffset=50.0 hscale=50 vscale=50}
+\caption{Water vapour as a function of height for the 6 AFGL atmospheres.}
+\end{figure}
+
+
+\newpage
+\vspace*{10cm}
+\begin{figure}[htb]
+\special{psfile=O3Profs.ps voffset=.0 hoffset=50.0 hscale=50 vscale=50}
+\caption{Ozone as a function of height for the 6 AFGL atmospheres.
+ numbered top down. Note that since we are using ppm, the increase in ozone mass per volume at ground level is masked.}
+\end{figure}
+
+\newpage
+\vspace*{10cm}
+\begin{figure}[htb]
+\special{psfile=N2OProfs.ps voffset=.0 hoffset=50.0 hscale=50 vscale=50}
+\caption{Nitreous Oxide as a function of height for the 6 AFGL atmospheres.
+ numbered top down.}
+\end{figure}
+
+
+\newpage
+\vspace*{10cm}
+\begin{figure}[htb]
+\special{psfile=COProfs.ps voffset=.0 hoffset=50.0 hscale=50 vscale=50}
+\caption{Carbon monoxide as a function of height for the 6 AFGL atmospheres.
+ numbered top down.}
+\end{figure}
+
+\newpage
+\vspace*{10cm}
+\begin{figure}[htb]
+\special{psfile=CH4Profs.ps voffset=.0 hoffset=50.0 hscale=50 vscale=50}
+\caption{Methane as a function of height for the 6 AFGL atmospheres.
+ numbered top down.}
+\end{figure}
+
+\newpage
+\vspace*{10cm}
+\begin{figure}[htb]
+\special{psfile=Gas8-12Profs.ps voffset=.0 hoffset=50.0 hscale=50 vscale=50}
+\caption{Profiles for Gases 8-12 (Table 1)}
+\end{figure}
+
+\newpage
+\vspace*{10cm}
+\begin{figure}[htb]
+\special{psfile=Gas13-17Profs.ps voffset=.0 hoffset=50.0 hscale=50 vscale=50}
+\caption{Profiles for Gases 13-17 (Table 1)}
+\end{figure}
+
+\newpage
+\vspace*{10cm}
+\begin{figure}[htb]
+\special{psfile=Gas18-23Profs.ps voffset=.0 hoffset=50.0 hscale=50 vscale=50}
+\caption{Profiles for Gases 18-23 (Table 1)}
+\end{figure}
+
+\newpage
+\vspace*{10cm}
+\begin{figure}[htb]
+\special{psfile=Gas24-28Profs.ps voffset=.0 hoffset=50.0 hscale=50 vscale=50}
+\caption{Profiles for Gases 24-28 (Table 1). Phosphine has a constant concentration of $10^{-14}ppm$}
+\end{figure}
+
+
+\section{Complex Refractive Index Tables}
 
 \begin{center}
 \begin{table}
@@ -1052,6 +1248,8 @@ large error in extinction coefficient as a function of wavelength.
 \caption{Long wavelength values of the complex refractive index of the large rural aerosol mode at high humidity}
 \end{table}
 \end{center}
+
+
 
 \newpage
 

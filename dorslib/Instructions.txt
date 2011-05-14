@@ -45,7 +45,7 @@
     here (except TIPS_2009.for}
 
 . run script1
-  run script2
+. run script2
 
 . su to root (get a systems manager to do this if you don't have the root password
 
@@ -55,6 +55,13 @@
 . ln -s libdors.so.0.0 libdors.so
 . ln -s libdors.so.0.0 libdors.so.0
 . ldconfig -n /usr/local/lib
+
+edit ~/.bashrc and add (if not there already)
+export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
+. Go to http://rredc.nrel.gov/solar/spectra/am0/ASTM2000.html
+. Download the spread sheet and save the E490 data as E490_00a_ASTM.dat in your The-Dors directory.
+. You might want to save the Wehrli85 data too.
 
 
 

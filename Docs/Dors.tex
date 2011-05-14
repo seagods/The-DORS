@@ -26,7 +26,11 @@ email:{\tt seagods@hotmail.com} }
 
 
 Without going into any details, the {\it The-DORS} is primarily intended as a simulator
-for ultra-violet, visible, and infrared radiation in the Earth's atmosphere. It consists
+for ultra-violet, visible, and infrared radiation in the Earth's atmosphere. 
+The radiative transfer calculations are {\it one dimensonal}, that is to say they assume a ``flat Earth" having
+an atmosphere that has tranlational symmetry. The properties of the atmosphere vary only with height.
+
+{\it The-DORS} consists 
 of three separate stages, {\it Dors1}, {\it Dors2}, and {\it Dors3}. {\it Dors1} sets up the
 details of the atmosphere, {\it Dors2} sets up the boundary condition at the ground, and
 {\it Dors3} actually does the radiative transfer calculations based on the output of {\it Dors1} and {\it Dors2}.
@@ -34,9 +38,9 @@ All the details of what these codes do are contained in three separate documents
 tell what to do once you have downloaded a copy of the {\it The-DORS}. I have written this document
  bearing in mind that the {\it The-DORS} may be used by undergraduate students or first
 year postgraduate students that don't yet have a lot of experience in computing. Because of this, I have 
-included a lot of very basic information.
+spelled out a lot of very basic stuff.
 
-If you have not obtained this document by downloading the {\it The-Dors}, you may obtain the code, data, and documentation
+If you have not obtained this document by downloading the {\it The-DORS}, you may obtain the code, data, and documentation
 by typing
 \begin{verbatim}
 git clone git@github.com:seagods/The-DORS.git[ENTER]
@@ -61,7 +65,7 @@ molecular database \cite{RothmanETAL:Mybib}.
  In order to get started, there is a only a moderate
 amount of work to do on a Linux or UNIX system. Whatever the operating system, you will need a C++ compiler.
 The {\it Gnu Compiler Collection} (gcc) includes C++, and is  completely free. It requires a {\it POSIX} compliant system.
-Linux and Mac OSX are {POSIX compliant, and most Linux distributions come with gcc. 
+Linux and Mac OSX are { \it POSIX compliant}, and most Linux distributions come with gcc. 
 
  So what if you have
 a PC running MS Windows? 
@@ -85,7 +89,7 @@ you need to do is (for free) download and install gcc.
 If you search on gcc, you shall soon find it. Make sure that gfortran gets installed
 along with g++. 
 Either way, to make the transition to Linux, all you need to do is to pop into a library and borrow a basic book on Linux
- or UNIX, or just type UNIX, Linux, along with  ``tutorial" into a search engine.
+ or UNIX, or just type ``UNIX", ``Linux", along with  ``tutorial" into a search engine.
 
 
 Now, once you are in the command line (thats right --- no fancy
@@ -93,26 +97,26 @@ Now, once you are in the command line (thats right --- no fancy
 error messages! Why? Well first there is that other mathematical software you need (its all free) 
 and then there is the {\it HITRAN} molecular database. We shall list the
 freely downloadable routines and where to get them at the end of this document,
-and go on to {\it HITRAN}.
+but first we go on to {\it HITRAN}.
 
 \section{What You Need from {\it HITRAN}}
 
 
-The {\it The-DORS} uses the 
+One of the main features of  {\it The-DORS} is that it uses the 
 {\it HITRAN} \cite{RothmanETAL:Mybib} molecular database to calculate molecular absorption of radiation.
 Molecular absorption is important for nearly all Earth
-atmosphere purposes, so {\it HITRAN} is needed. The {\it The-DORS} directory has an empty directory
+atmosphere purposes, so {\it HITRAN} is needed. Your {\it The-DORS} directory has an empty directory
 named {\it HITRAN}.
  Again, just use a search engine, and the {\it HITRAN} home page
 should be there. You will need to fill in an online request form, and it may take a while for
 you to receive an email telling you how to download it. It it is quite likely that you might want to 
 download {\it HITRAN} as a stand alone data base. If so, download all the necessary files
-and documentation and keep it entirely separate from the {\it DORS}, then copy what is
-necessary to the {\it The-DORS/HITRAN" director}.
+and documentation and keep it entirely separate from {\it The-DORS}, then copy what is
+necessary to your {\it The-DORS/HITRAN"} directory.
 
-It may be that you will be given html access to {\it HITRAN:} however, just in case you need
-to use {\it ftp} via the command line, I shall include what you need the details if what you need to know 
-about this.
+It may be that you will be given html access to {\it HITRAN} which will make life easy: however, just in case you need
+to use {\it ftp} via the command line, I shall include some of the details  of what you need to know 
+about using {\it ftp}.
 I shall suppose you use have {\it ftp} available. 
 You have received
  the {\it ftp} address via email and have typed {\it ftp whatever.edu} 
@@ -171,22 +175,28 @@ programs files will go into the {\it Dors library}.
 
 \section{Library Programs - Building the Dors Library}
 
-As well as these {\it FORTRAN} programs, ``The-Dors" requires various mathematical programs which we shall combine into a library. The good news is
-that they are all free, copyright free, and patent free. You can distribute freely (as long as you don't say you wrote
- them and so on. If you do distribute them - say where they are from!  However, I have chosen {\it not} to distribute
+As well as these {\it FORTRAN} programs, ``The-Dors" requires various mathematical programs which we shall
+ combine into a library. The good news is
+that they are all free, copyright free, and patent free. You can distribute them freely (as long as you don't say you wrote
+ them or stupid stuff like that). If you do distribute them - say where they are from - and please don't edit them without saying so!  
+
+However, I have chosen {\it not} to distribute
 them with ``The-DORS" (The reason is I don't have the space in my {\it github} account to distribute
-them from there.  Instead, ``The-DORS" file contains a subdirectory called  {\it dorslibs}.
+them from there.  Instead, ``The-DORS" file contains a subdirectory called  {\it dorslib}.
 This contains a plain text file called {\it Instructions.txt}. It tells you what to do if you put your {\it The-Dors}
 directory in your home directory. You will have to make your own adjustments if you put it elsewhere.
+I have distributed {\it HUMLIK.f} \cite{BobWells:MyBib} which calculates Voigt profiles
+ \footnote{See http://www.atm.ox.ac.uk/wells/voigt.html}
 
-That is, it tells you all the maths library routines you need to download, and where to download them from. 
-(I may put them all on {\it zSHARE} so you can download them all as a gzipped tarfile. They take up
+The Instructions.txt file tells you all the maths library routines you need to download, and where to download them from. 
+(I may put them all on {\it zSHARE} so you can download them all as a single gzipped tarfile as they take up
 too much space for to put them on a free github account).
 As well as this
 there are two scripts that will build them all into a single library archive by running {\it script1} and then {\it script2}
 and finishing off the instructions in the {\it Instructions.txt} file.
 Note that this library will contain the {\it HITRAN} subroutines and functions that you downloaded, and is linked
- with {\it -lDors} at the compilation stage.
+ with {\it -ldors} at the compilation stage. Note that some of the FORTRAN programs that you get from {\it HITRAN}
+are actually incorporated into the main one (BD\_TIPS\_20003) via include statements. They are not compiled separately.
 
  In your {\it The-DORS} directory there 
 is a script {\it compile} that compiles ``The-DORS". (Make sure your compile script is executable by doing ``chmod u+x compile"

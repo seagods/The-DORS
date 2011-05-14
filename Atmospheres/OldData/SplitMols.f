@@ -2,13 +2,13 @@
 
        integer n
        double precision x(7)
-       open(1,file="Mols5.dat")
-       open(2,file="Mols5_H2O.dat")
+       open(1,file="Mols2.dat")
+       open(2,file="Mols2_H2O.dat")
        open(3,file="Mols_CO2.dat")
-       open(4,file="Mols5_O3.dat")
-       open(5,file="Mols5_N2O.dat")
-       open(6,file="Mols5_CO.dat")
-       open(7,file="Mols5_CH4.dat")
+       open(4,file="Mols2_O3.dat")
+       open(5,file="Mols2_N2O.dat")
+       open(6,file="Mols2_CO.dat")
+       open(7,file="Mols2_CH4.dat")
        open(8,file="Mols_O2.dat")
        read(1,*)n
        write(2,*)n

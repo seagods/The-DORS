@@ -1,3 +1,3 @@
-g++ -shared -fPIC -Wl,-soname,libdors.so.0  -o libdors.so.0.0  weightcoeff.o dbvalu.o dbint4.o dbspvd.o dbnfac.o dbnslv.o dintrv.o d1mach.o dbspvn.o fdump.o i1mach.o j4save.o xermsg.o xerprn.o xersve.o xerhlt.o xercnt.o xgetua.o BD_TIPS_2003.o -lc
+g++ -shared -fPIC -Wl,-soname,libdors.so.0  -o libdors.so.0.0  weightcoeff.o dbvalu.o dbint4.o dbspvd.o dbnfac.o dbnslv.o dintrv.o d1mach.o dbspvn.o fdump.o i1mach.o j4save.o xermsg.o xerprn.o xersve.o xerhlt.o xercnt.o xgetua.o BD_TIPS_2003.o HUMLIK.o -lc
 
 rm *.o

@@ -1,7 +1,7 @@
-This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6) (format=latex 2011.1.5)  2 MAR 2011 12:52
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6) (format=latex 2011.1.5)  14 MAY 2011 18:04
 entering extended mode
  %&-line parsing enabled.
-**GalRel2
+**SciFile.tex
 (/usr/share/texmf/tex/latex/tools/q.tex
 LaTeX2e <2005/12/01>
 Babel <v3.8h> and hyphenation patterns for english, usenglishmax, dumylang, noh
@@ -14,8 +14,8 @@ turkish, ukenglish, ukrainian, loaded.
 File ignored
 )
 ! Emergency stop.
-<*> GalRel2
-           
+<*> SciFile.tex
+               
 *** (job aborted, no legal \end found)
 
  
@@ -26,5 +26,5 @@ Here is how much of TeX's memory you used:
  3390 multiletter control sequences out of 10000+200000
  3640 words of font info for 14 fonts, out of 1200000 for 2000
  645 hyphenation exceptions out of 8191
- 5i,0n,1p,92b,8s stack positions out of 5000i,500n,6000p,200000b,15000s
+ 5i,0n,1p,96b,8s stack positions out of 5000i,500n,6000p,200000b,15000s
 No pages of output.
