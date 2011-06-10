@@ -9,15 +9,14 @@ void Questioner(bool& verbose,
                int &nsplit1, int &nsplit2, int &nsplit3, int &nsplit4, bool& vis, double &visb,
                double &vist, double &lambda1, double &lambda2, bool &rfun, int &iatm, bool &switchR, bool  &switchA, int& itypeu,
                int& itypes, int& itypet, int& itypeb, bool& ocean, bool& groundP, bool& groundT,
-               int& ihumid, double& groundtemp, double& groundpress, bool& aeroplane, double& heightplane,
+               int& ihumid, double& groundtemp, double& groundpress,
                bool& default_pause, double& HG, double& HB, double& HT, double& HS, double& HU, int& ngaussL,
-               bool& calcspec, bool& outspec, int& ngaussLs, double& nu_cut, double& nu_Delta,
+               bool& calcspec, bool& outspec, int& ngaussLs, int& icutL, int& icutD, int& istep,
                const char* ReadInput){
 
 vist=-1;vist=-1;lambda1=-1; lambda2=-1; nsplit1=-1;nsplit2=-1;nsplit3=-1;nsplit4=-1;
 iatm=-1;switchR=0;switchA=0;itypeu=-1;itypes=-1;itypet=-1;itypeb=-1;ocean=0;
-ihumid=-1; groundtemp=-1e6;groundpress=-1;
-aeroplane=0;heightplane=-1e6, default_pause=true;
+ihumid=-1; groundtemp=-1e6;groundpress=-1; default_pause=true;
 
   cout << "verbose=" << verbose << " Input file =" << ReadInput << endl;
 
@@ -32,14 +31,13 @@ aeroplane=0;heightplane=-1e6, default_pause=true;
       fp_in >> lambda1 >> lambda2 >> rfun;
       fp_in >> calcspec >> outspec;
       fp_in >> ngaussLs;
-      fp_in >> nu_cut >> nu_Delta;
+      fp_in >> icutL >> icutD >> istep;
       fp_in >> vis >>  vist  >> visb;
       fp_in >>  nsplit1 >> nsplit2 >> nsplit3 >> nsplit4;
       fp_in >> iatm;
       fp_in >> switchR >> switchA;
       fp_in >> itypeu >> itypes >> itypet >> itypeb >> ocean;
       fp_in >> ihumid >> groundP >> groundT >> groundtemp >> groundpress;
-      fp_in >> aeroplane >> heightplane;
       fp_in >> default_pause >> HG >> HB >> HT >> HS >> HU;
       fp_in >> ngaussL;
       fp_in.close();
@@ -65,10 +63,12 @@ aeroplane=0;heightplane=-1e6, default_pause=true;
   cin >> outspec;
   cout << "Enter order of Gauss-Legendre quadrature rule for integration over distributions\n";
   cin >> ngaussLs;
-  cout << "Enter cutoff for spectral lines (per cm)\n";
-  cin >> nu_cut;
-  cout << "Enter step size for spectrum (per cm)\n";
-  cin >> nu_Delta;
+  cout << "Enter (integer) number of linewidths for cut-off for a Lorentz profile\n";
+  cin >> icutL;
+  cout << "Enter (integer) number of linewidths for cut-off for a Doppler profile\n";
+  cin >> icutD;
+  cout << "Enter istep (integer that sets the resolution for each line --- make it 10 or more)\n";
+  cin >> istep;
 
 
   cout << "Enter 1 if you want to use visibility, 0 for optical depths instead\n";
@@ -197,14 +197,6 @@ aeroplane=0;heightplane=-1e6, default_pause=true;
                }
         }
 
-
-     cout << "Enter 1 for aeroplane remote sensing, enter 0 otherwise\n";
-     cin >> aeroplane;
-
-     if(aeroplane){
-         cout << "Enter height of aeroplane\n";
-         cin >> heightplane;
-         }
       cout << "Enter 1 for  default ground,  bdry layer, tropopause, stratopause, TOA heights\n";
       cout << "Enter 2 to enter user defined values for these\n";
       cin >> default_pause;
@@ -235,7 +227,7 @@ aeroplane=0;heightplane=-1e6, default_pause=true;
         fprintf(fp0, "%lf %lf %d \n", lambda1, lambda2, rfun);
         fprintf(fp0, "%d %d\n", calcspec, outspec);
         fprintf(fp0, "%d\n", ngaussLs);
-        fprintf(fp0, "%f %f\n", nu_cut, nu_Delta);
+        fprintf(fp0, "%d %d\n", icutL, icutD, istep);
 
         fprintf(fp0, "%d %lf %lf\n", vis, vist, visb);
         fprintf(fp0, "%d %d %d %d\n", nsplit1, nsplit2, nsplit3, nsplit4);
@@ -243,7 +235,6 @@ aeroplane=0;heightplane=-1e6, default_pause=true;
         fprintf(fp0, "%d %d\n", switchR, switchA);
         fprintf(fp0, "%d %d %d %d %d\n", itypeu, itypes, itypet, itypeb, ocean);
         fprintf(fp0, "%d %d %d %lf %lf\n", ihumid, groundP, groundT, groundtemp, groundpress);
-        fprintf(fp0, "%d %lf\n", aeroplane, heightplane);
         fprintf(fp0, "%d %lf %lf %lf %lf %lf\n", default_pause, HG, HB, HT, HS, HU);
         fprintf(fp0, "%d\n", ngaussL);
         fclose(fp0);

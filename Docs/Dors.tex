@@ -53,6 +53,7 @@ I shall suppose you have downloaded the {\it The-DORS} from {\it GitHub}, and yo
 of ``The-DORS". This contains the source code of the computer programs that
 I have written: these need to be compiled together with additional programmes.
 It also contains various data directories.
+
  So, the {\it DORS} has some dependencies, and this document is here to tell you
 where to get the things that the {\it DORS} depends on. With these, you can get the thing up and running.
 The {\it DORS} was developed to run on a PC running Linux, so getting the programs compiled
@@ -172,6 +173,17 @@ gfortran -c TIPS_2009.for
 The example driver program is called {\it TIPS\_2009}, and you now have a stand alone executable file called {\it TIPS} which you can test. The rest of the 
 programs files will go into the {\it Dors library}.
 
+\section{Water Vapour Continuum}
+
+You shall also need to go to http://rtweb.aer.com/ and download the $MT CKD$ water vapour continuum program (version 2.5). The continuum model has been under development since the original paper by Clough, Kneizys, and Davies \cite{MTCKD:Mybib}. The release notes provide plenty of references as to how the subject has evolved. I have modified the driver so it can be called
+as a function from the main program. I find the code difficult to follow --- it is meant to be a subroutine for $LBLRTM$
+which you can also obtaing from this site. Once you have downloaded it, overwrite the "cntnm_prog.f"  with the one I provide.
+You then need to modify ``makefile.common". You need to change "-Wall" in ``FCFLAGS"  to "-fPIC -g -c -Wall" so it can go into the Dors library. Then run gmake as in the ``README" in the build directory. You will now have an object file in the ``.obj"
+ sub-directory which you can copy to the ``dorslib" directory.
+
+
+
+
 
 \section{Library Programs - Building the Dors Library}
 
@@ -196,7 +208,7 @@ there are two scripts that will build them all into a single library archive by 
 and finishing off the instructions in the {\it Instructions.txt} file.
 Note that this library will contain the {\it HITRAN} subroutines and functions that you downloaded, and is linked
  with {\it -ldors} at the compilation stage. Note that some of the FORTRAN programs that you get from {\it HITRAN}
-are actually incorporated into the main one (BD\_TIPS\_20003) via include statements. They are not compiled separately.
+are actually incorporated into the main one (BD\_TIPS\_2003) via include statements. They are not compiled separately.
 
  In your {\it The-DORS} directory there 
 is a script {\it compile} that compiles ``The-DORS". (Make sure your compile script is executable by doing ``chmod u+x compile"

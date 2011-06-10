@@ -15,32 +15,37 @@ extern "C" {
 void dbint4_(double*, double*, int*, int*, int*,  double*, double*,
               int*, double*, double*, int*, int*, double*);
              
-
 double dbvalu_(double*, double*, int* ,int*,int* ,double*, int*, double*);
 
 //toms library Gauss quadrature
 void weightcoeff_(int*, double*, double*, double*, double*,
                        double*, double*);
+
+//HITRAN Partition Function  --- note calling from c++ means all lower case
+void bd_tips_2003_(int&, double&, int&, double&, double&);
 }
 
 void Questioner( bool&,
                 int&, int&, int&, int&, bool&, double&,
                 double&, double&, double&, bool&,  int&, bool&, bool&, int&,
                 int&, int&, int&, bool&, bool&, bool&, 
-                int&, double&, double&, bool&, double&,
+                int&, double&, double&,
                 bool&, double&, double&, double&, double&, double&, int&, 
-                bool&, bool &, int&, double&, double&,
+                bool&, bool &, int&, int&, int&, int&,
                 const char*);
 
 void WaterVap(double* , double* , double* ,
               double* , double &, double &, double &, int &, int &, int &);
+
               
 
 int main(int argc, char* argv[]){
 
   bool verbose;   //verbose mode for input, read from file if false;
+  //verbose output bools
   bool verbose_out=true;  // output loads of info to standard output
   bool verbose_height=false;   //output height integration info to std::out
+  bool verbose_spect=false;   // output spectrum details to std out
 /**************************************************************************************
    Stage 1:  declare and define various data to define the atmosphere
              read response function, read atmospheric definitions
@@ -87,9 +92,10 @@ int main(int argc, char* argv[]){
   double HG, HB, HT, HS, HU;  //height of ground, bdry layer, tropopause, stratosphere
   int ngauss_height, ngauss_correlkay;       //order of Gauss-Legendre quadrature height and cumulative distribution
   bool calcspec, outspec;              //if false, don't bother with calculating the 
-  double nu_cut, nu_Delta;
+  double nu_cut; int icutL, icutD, istep;   //wave number cutoffs and spectral resolution
   const char* ReadInput;      //name of input file
   const char* RespFile;       //name of response function file
+  
 
    // First off we read in the user input, whether 
    // from command line (Dors1 -v) or an input file (Dors1)
@@ -104,6 +110,7 @@ int main(int argc, char* argv[]){
 
     if(argc==1)
      verbose=false;
+   //  verbose=true;   // comment out if using ddd or other display debugger
 
      ReadInput="Dors1in.dat";
      RespFile="myresp.dat";
@@ -146,9 +153,9 @@ int main(int argc, char* argv[]){
               nsplit1, nsplit2, nsplit3, nsplit4, vis, visb,
               vist, lambda1, lambda2, rfun,  iatm, switchR, switchA, itypeu,
               itypes, itypet, itypeb, ocean, groundP, groundT,
-              ihumid, groundtemp, groundpress, aeroplane, heightplane,
+              ihumid, groundtemp, groundpress,
               default_pause, HG, HB, HT, HS, HU, ngauss_height, 
-              calcspec, outspec, ngauss_correlkay, nu_cut, nu_Delta,
+              calcspec, outspec, ngauss_correlkay, icutL,icutD,istep,
               ReadInput);  
 
     int nresp;
@@ -204,7 +211,7 @@ int main(int argc, char* argv[]){
     }
             
    /* *********************************************************** */
-   /*        Quadrature Rule for Correletad kay                   */
+   /*        Quadrature Rule for Correlated kay                   */
    /* *********************************************************** */
     double QK[ngauss_correlkay],EK[ngauss_correlkay],XgaussK[ngauss_correlkay],WgaussK[ngauss_correlkay],Work_gK[9*ngauss_correlkay+8];
     double EPSK, XtempK[ngauss_correlkay]; //needed for Gauss quadrature Xgauss=knots, WGauss are the weights.
@@ -247,6 +254,19 @@ int main(int argc, char* argv[]){
    MWA=28.946;                  //Molecular Weight of Air
    delta=0.029;                 //depolarisation factor
    nucleon=1.66053886E-24;      //"nucleon mass" (a.m.u) in grammes
+
+   //constants for spectral calculations using HITRAN data
+   double RefTemp=296.0;   //Temperature at which linestrength data are taken
+   double RefPress=1013*100.0; //Converts mbar to Pascals    
+   double C2=1.4387752;   //=hc/Boltzman constant=second radiation constant. N.B.  units are Kelvin per cm
+                          //so C2*wavenumber/T per cm is (photon energy)/kT
+   double log2=log(2.0);
+   double sqrtlog2=sqrt(log2);
+   double sqrtlog2opi=sqrt(log2/pi);
+   double Boltz=1.3806503e-16;  //Boltzmann's constant (cgs units)
+   //speed of light in cm per sec.
+   double Speedlight=2.99792458e10;
+
 
 
    ifstream fp_in;   //input file stream
@@ -351,18 +371,18 @@ int main(int argc, char* argv[]){
    string line1;
    getline(fp_in, line1);  //get first line, no info, then one getline
                          //for each molecule (no info)
-   cout << line1 << endl;
+   if(verbose_spect)cout << line1 << endl;
    int  imol=0;
    while(!getline(fp_in, line1).eof()){
-      cout << line1 << endl;
+      if(verbose_spect)cout << line1 << endl;
       for(int iso=0; iso<nice[imol];iso++){
          fp_in >>  nicecode[imol][iso] >> niceabund[imol][iso] >> QTref[imol][iso]
                >> geejay[imol][iso] >> AllMolW[imol][iso];
-         if(verbose_out)cout << imol+1 << " " << nice[imol] << "  " << nicecode[imol][iso] << "  " << AllMolW[imol][iso] << endl;
+         if(verbose_spect)cout << imol+1 << " " << nice[imol] << "  " << nicecode[imol][iso] << "  " << AllMolW[imol][iso] << endl;
       }
       if(!getline(fp_in,line1)){ break;}
        // << "  getline return\n";
-      cout << line1;
+      if(verbose_spect)cout << line1;
      // if(getline(fp_in, line1).eof()){ break;}
       imol++;
    }
@@ -685,7 +705,7 @@ int main(int argc, char* argv[]){
         for(int i=0; i<nsplit4; i++){
            for(int j=0; j<ngauss_height; j++){
            heights[kount]=HeightFloors[i]+SlabThick[i]*Xgauss[j];
-           if(verbose_height)cout <<"kount=" << kount << "  heights=" << heights[kount] 
+           if(verbose_height)cout <<"kount=" << kount << "  heights=" << heights[kount] << endl;
            kount++;
         }}
         for(int i=0; i<nsplit3; i++){
@@ -721,8 +741,8 @@ int main(int argc, char* argv[]){
         double ENN[iheight],Dens[iheight];  //Number of molecules per cubic metre, density Kg per m^3
         for(int i=0; i<iheight;i++){
             //multiply by 100 to convert pressure to Pascals
-            ENN[i]=Press[i]/R/Temp[i]*AV*100.; 
-            // multiply by MW to get mass per vol in gramms
+            ENN[i]=Press[i]*100.0/R/Temp[i]*AV; 
+            // multiply by MW to get mass per vol in grammes
             // divide by 1000 to get mass per vol in Kg
             // nucleon is just 1/Av 
             Dens[i]=ENN[i]*MWA*nucleon/1000.0;    
@@ -770,7 +790,6 @@ int main(int argc, char* argv[]){
                            Do Integrals
 ****************************************************************************************/
             
-       cout << "Begin Stage 3\n";
        int kountH=iheight; // count integration points top down down
        int kountS=0;       //kount slabs down
        int islab=up_to_top;
@@ -784,9 +803,9 @@ int main(int argc, char* argv[]){
        for(int i=0; i<ngas; i++){
              totalmasses[i]=0.0;
        }
-       cout << "***************************************\n";
+       if(verbose_out)cout << "***************************************\n";
        for(int i=nsplit1; i > 0; i--){
-       cout << nsplit1-i<< "_______________________________________\n";
+           if(verbose_out)cout << nsplit1-i<< "_______________________________________\n";
            AvTemp[nsplit1-i]=0.0;
            AvPress[nsplit1-i]=0.0;
            massgas[nsplit1-i]=0.0;
@@ -795,7 +814,7 @@ int main(int argc, char* argv[]){
            }
            for(int j=0; j < ngauss_height; j++){
              kountH--;
-             cout << "j=" <<  j << "  " << Wgauss[j] << " " << Temp[kountH] << " " << kountH << endl;
+             if(verbose_out)cout << "j=" <<  j << "  " << Wgauss[j] << " " << Temp[kountH] << " " << kountH << endl;
              AvTemp[nsplit1-i]=AvTemp[nsplit1-i]+Wgauss[j]*Temp[kountH];
              AvPress[nsplit1-i]=AvPress[nsplit1-i]+Wgauss[j]*Press[kountH];
              massgas[nsplit1-i]=massgas[nsplit1-i]+Wgauss[j]*Dens[kountH];
@@ -815,9 +834,9 @@ int main(int argc, char* argv[]){
         if(verbose_height)cout << AvTemp[nsplit1-i] << "  " << AvPress[nsplit1-i] << "  " << totalmass <<endl;
         }
        idown=idown+nsplit1;
-       cout << "***************************************\n";
+       if(verbose_out)cout << "***************************************\n";
        for(int i=nsplit2; i > 0; i--){
-       cout << nsplit2-i+idown <<"_______________________________________\n";
+           if(verbose_out)cout << nsplit2-i+idown <<"_______________________________________\n";
            AvTemp[nsplit2-i+idown]=0.0;
            AvPress[nsplit2-i+idown]=0.0;
            massgas[nsplit2-i+idown]=0.0;
@@ -826,7 +845,7 @@ int main(int argc, char* argv[]){
            }
            for(int j=0; j < ngauss_height; j++){
              kountH--;
-             cout << "j=" << j << "  " << Wgauss[j] << " " << Temp[kountH] << " " << kountH << endl;
+             if(verbose_out)cout << "j=" << j << "  " << Wgauss[j] << " " << Temp[kountH] << " " << kountH << endl;
              AvTemp[nsplit2-i+idown]=AvTemp[nsplit2-i+idown]+Wgauss[j]*Temp[kountH];
              AvPress[nsplit2-i+idown]=AvPress[nsplit2-i+idown]+Wgauss[j]*Press[kountH];
              massgas[nsplit2-i+idown]=massgas[nsplit2-i+idown]+Wgauss[j]*Dens[kountH];
@@ -845,9 +864,9 @@ int main(int argc, char* argv[]){
         if(verbose_height)cout << AvTemp[nsplit2-i+idown] << "  " << AvPress[nsplit2-i+idown] << "  " << totalmass << endl;
         }
        idown=idown+nsplit2;
-       cout << "***************************************\n";
+       if(verbose_out)cout << "***************************************\n";
        for(int i=nsplit3; i > 0; i--){
-       cout << nsplit3-i+idown<< "_______________________________________\n";
+          if(verbose_out)cout << nsplit3-i+idown<< "_______________________________________\n";
            AvTemp[nsplit3-i+idown]=0.0;
            AvPress[nsplit3-i+idown]=0.0;
            massgas[nsplit3-i+idown]=0.0;
@@ -856,7 +875,7 @@ int main(int argc, char* argv[]){
            }
            for(int j=0; j < ngauss_height; j++){
              kountH--;
-             cout << "j=" << j << "  " << Wgauss[j] << " " << Temp[kountH] << " " << kountH << endl;
+             if(verbose_out)cout << "j=" << j << "  " << Wgauss[j] << " " << Temp[kountH] << " " << kountH << endl;
              AvTemp[nsplit3-i+idown]=AvTemp[nsplit3-i+idown]+Wgauss[j]*Temp[kountH];
              AvPress[nsplit3-i+idown]=AvPress[nsplit3-i+idown]+Wgauss[j]*Press[kountH];
              massgas[nsplit3-i+idown]=massgas[nsplit3-i+idown]+Wgauss[j]*Dens[kountH];
@@ -875,9 +894,9 @@ int main(int argc, char* argv[]){
         if(verbose_height)cout << AvTemp[nsplit3-i+idown] << "  " << AvPress[nsplit3-i+idown] << "  " << totalmass << endl;
         }
        idown=idown+nsplit3;
-       cout << "***************************************\n";
+       if(verbose_out)cout << "***************************************\n";
        for(int i=nsplit4; i > 0; i--){
-       cout << nsplit4-i+idown<< "_______________________________________\n";
+           if(verbose_out)cout << nsplit4-i+idown<< "_______________________________________\n";
            AvTemp[nsplit4-i+idown]=0.0;
            AvPress[nsplit4-i+idown]=0.0;
            massgas[nsplit4-i+idown]=0.0;
@@ -886,7 +905,7 @@ int main(int argc, char* argv[]){
            }
            for(int j=0; j < ngauss_height; j++){
              kountH--;
-             cout << "j=" << j << "  " << Wgauss[j] << " " << Temp[kountH] << " " << kountH << endl;
+             if(verbose_out)cout << "j=" << j << "  " << Wgauss[j] << " " << Temp[kountH] << " " << kountH << endl;
              AvTemp[nsplit4-i+idown]=AvTemp[nsplit4-i+idown]+Wgauss[j]*Temp[kountH];
              AvPress[nsplit4-i+idown]=AvPress[nsplit4-i+idown]+Wgauss[j]*Press[kountH];
              massgas[nsplit4-i+idown]=massgas[nsplit4-i+idown]+Wgauss[j]*Dens[kountH];
@@ -905,13 +924,15 @@ int main(int argc, char* argv[]){
         if(verbose_height)cout << AvTemp[i+idown] << "  " << AvPress[i+idown] << "  " << totalmass << endl;
         }
 
-        cout << "mass of gas per square metre * g=" << 9.81*totalmass << "  Pascals="
-              << 9.81*totalmass/100.0 << "mbar\n";
-        cout << "Ground pressure was given as " << P[0] << "mbar:  Discrepancy due to interpolation error\n";
+        cout << "mass of gas per square metre * g=" << 9.81*totalmass << "  Pascals="  
+              << "  " <<9.81*totalmass/100.0 << "mbar\n";
+        cout << "Ground pressure was given as " << P[0] << "mbar:  Discrepancy due to interpolation+integration error\n";
         cout << "We now scale masses to regain original ground pressure and convert to g per cm^2\n";
-        cout << "amd calculate number densities per cm^2 to calculate line strengths\n";
+        cout << "and calculate number densities per cm^2 to calculate line strengths\n";
 
-        double correction=9.81*totalmass/P[0];
+        //convert P[0] mbar to Pascals,  1mbar=100  Pascals - otherwise masses are all wrong!
+       
+        double correction=9.81*totalmass/(P[0]*100);   
 
         for(int i=0; i< iheight; i++){
                Press[i]=Press[i]/correction; }
@@ -923,6 +944,9 @@ int main(int argc, char* argv[]){
 
         //convert from Kg per square metre to g per square cm.
         // Kg to g times=1000; metre square to cm square /=10000
+        // g  per square cm = Kg per square metre /1000*10000 
+        // We have calculated Kg per square metre---divide by 10 to get g per cm^2.
+        //
 
         for(int k=0; k<ngas; k++){
           for(int i=0; i<up_to_top; i++){
@@ -932,16 +956,17 @@ int main(int argc, char* argv[]){
         }
         totalmass=totalmass/10.0/correction;
 
-        cout << "gases in each layer --- top down --- g per cm^2\n";
+        if(verbose_out)cout << "gases in each layer --- top down --- g per cm^2\n";
         for(int i=0; i<up_to_top; i++){ //top down actually
             for(int k=0; k < ngas ; k++){
-                  cout << massgases[i][k] << " ";}
-                  cout << endl;}
-        cout << "totals\n";
+                  if(verbose_out)cout << massgases[i][k] << " ";}
+                  if(verbose_out)cout << endl;}
+        if(verbose_out)cout << "totals\n";
         for(int k=0; k < ngas ; k++){
-             cout << totalmasses[k] << " ";}
+             if(verbose_out)cout << totalmasses[k] << " ";}
 
-        cout <<  "  totalmass=" << totalmass << "g per cm^2" << "  ground pressure now " << 9.81*10*totalmass << endl; 
+        if(verbose_out)cout <<  "  totalmass=" << totalmass << "g per cm^2" << "  ground pressure now "
+                            << 9.81*10*totalmass << " Pascals" <<endl; 
 
 /***************************************************************************************
                           END STAGE 3
@@ -949,17 +974,17 @@ int main(int argc, char* argv[]){
                          BEGIN STAGE 4
                          HITRAN DATA 
 ****************************************************************************************/
-
+      if(calcspec){    //there are reasons we might not want to bother!
 //    declarations for HITRAN input
       cout <<" Now read HITRAN par files\n";    
       int Imol;                                    //molecule number
       int Iso;                                     //Isotopologue
-      double nu;                                   //Wave number
+      double nu=0.0;                                   //Wave number
       double S_intense;                            //line intensity
       double Einstein_A;                           //Einstein A coefficient
       double gamma_air, gamma_self;                //broadened half-widths
       double LSE;                                  //lower state energy
-      double Tdep_gamma_air;                       //For temperature dependence gammma_air
+      double T_depLorentz;                       //For temperature dependence gammma_air
       double Press_shift   ;                       //Shift due to pressure
       int ierr[6];                                 //6 error parameters
       int iref[6];                                 //6 reference parameters
@@ -969,21 +994,37 @@ int main(int argc, char* argv[]){
 
       //wave number interval based on lambda1 and lambda2
       //look at wavenumbers nu1-cutoff to nu2+cutoff;
-      double nu1, nu2, cutoff, lambda1X,lambda2X;
-      nu1=1e4/lambda2; nu2=1e4/lambda1; cutoff=0.1;
-      nu1=nu1-nu1*cutoff; nu2=nu2+nu2*cutoff;
-      lambda1X=1.0e4/nu2; lambda2X=1.0e4/nu1;
+      double nu1, nu2, nu1X, nu2X, lambda1X, lambda2X;
+      nu1=1e4/lambda2; nu2=1e4/lambda1;
+      nu1X=nu1-nu_cut; nu2X=nu2+nu_cut;
+      lambda1X=1.0e4/nu2X; lambda2X=1.0e4/nu1X;
      
-      cout << "nu1 nu2 " << nu1 << "  " << nu2  <<endl;
+      cout << "nu1X nu2X " << nu1X << "  " << nu2X  <<endl;
       cout << "lambda1X  lambda2X  " << lambda1X << "  " << lambda2X << endl;
+      bool singlewave=false;
 
+      if(lambda2<lambda1){
+          cout << "second wavelength smaller than first, Dors1 Failed \n"; exit(1);}
+
+      if(lambda2 > lambda1){
+          singlewave=false;
+      }
+      else{singlewave==true;} 
+
+      int n_waves;  // number of wave numbers for fine detail spectrum
+      double* wavearray;  // array for fine detail wave numbers
+      
+      
       string  PARFILE="HITRAN/   hit08.par";
       double lambda;   // a wavelength
       
       string line;
       string entry[19];
       istringstream iss[19]; //19 input stringstreams
+      
+
       for(int ig=0; ig<ngas; ig++){ //loop to read from HITRAN files.
+        
         int molecule=gases[ig];
         int ireplace1=molecule/10; int  ireplace2=molecule%10;
         ireplace1=ireplace1+48; ireplace2=ireplace2+48; //ascci '0' is 48
@@ -994,17 +1035,26 @@ int main(int argc, char* argv[]){
         fp_in.open(PARFILE.c_str(),ios::in);
         if(!fp_in.is_open()){cout <<" can't open HITRAN file \n";
                              cout << PARFILE.c_str() << endl;  exit(1);}
-        int kountlines=0;
         int vecsize=nice[ig];
         if(vecsize>nicemax)vecsize=nicemax;
-
+      
+        // for picking out max line strength for each Isotopologue
+        int istr_max[vecsize];    // which line has strength str_max?
+        int ikount[vecsize];      // number of lines for isotopolgue
+        double str_max[vecsize];  // max line strength for Isotopolgue
+        for(int i=0; i<vecsize; i++){
+           istr_max[i]=0;
+           ikount[i]=-1;
+           str_max[i]=-1.0;
+        }
+        //vectors for each isotopologue, vecsize <=nicemax depending on nice[ig]
         vector<double> linecentres[vecsize];
         vector<double> linestrengths[vecsize];
         vector<double> linegammaAir[vecsize];     // air broadening
         vector<double> linegammaSelf[vecsize];    // self broadening broadening
         vector<double> lineLSE[vecsize];          // Lower state Energy
-        vector<double> line_gp[vecsize];          // Stat weight upper
-        vector<double> line_gpp[vecsize];         // Stat weight lower     
+        vector<double> lineTdep[vecsize];          // Stat weight upper
+        vector<double> lineShift[vecsize];         // Stat weight lower     
 
         for(int k=0; k<vecsize; k++){
             linecentres[k].clear();
@@ -1012,23 +1062,28 @@ int main(int argc, char* argv[]){
             linegammaAir[k].clear();
             linegammaSelf[k].clear();
             lineLSE[k].clear();    
-            line_gp[k].clear();    
-            line_gpp[k].clear();            
+            lineTdep[k].clear();    
+            lineShift[k].clear();            
          }
 
-        while(!getline(fp_in, line).eof()){
-          entry[1]=line.substr(2,1); //
-          iss[1].str(entry[1]);
-          iss[1] >> Iso;
+        // Loop that reads in HITRAN data
+        while(!getline(fp_in, line).eof()){  // get the line "line" --- what a jazzy name!
+          entry[1]=line.substr(2,1); // first of 19 substrings called entry  (start pos=2, length=1)
+          iss[1].str(entry[1]);      // input to first of 19 input string streams called iss
+          iss[1] >> Iso;             // put content of second iss to Iso (iss[0] is lower down)
 
 
           if(Iso<=nicemax){ // number of isotopologues considered
-          entry[2]=line.substr(3,12); //get wave number first
+          entry[2]=line.substr(3,11); //get wave number first
           iss[2].str(entry[2]);
-          iss[2] >> nu;
-          if(nu > nu1 && nu < nu2){
-          cout << line << endl;
-          kountlines++;
+          iss[2] >> fixed;
+          // setprecision fixes the (maximum) number of digits
+          // but fortran F12.6 is the width of the field and 6 digits after the decimal
+          // width of field includes the decimal point -hence setprecision with 11.
+          nu=0.0;
+          iss[2] >> setprecision(11) >> nu;
+          if(nu > nu1X && nu < nu2X){
+          if(verbose_spect)cout << line << endl;
           entry[0]=line.substr(0,2); 
           entry[3]=line.substr(15,10); entry[4]=line.substr(25,10); entry[5]=line.substr(35,5);
           entry[6]=line.substr(40,5); entry[7]=line.substr(45,10); entry[8]=line.substr(55,4);
@@ -1039,40 +1094,55 @@ int main(int argc, char* argv[]){
 
           iss[0].str(entry[0]);  
           iss[0] >> Imol;
-          cout << "Imol="  << Imol << endl;
-          cout << "Iso=" <<Iso << "  " << nicecode[Imol-1][Iso-1]  <<endl;
-          cout << "nu="  << nu <<  "  "  << nu1 << "  " << nu2 << endl;
-          cout << 10000/nu  << " " << lambda1X << " " << lambda2X<<  endl;
+          if(verbose_spect)cout << "Imol="  << Imol << endl;
+          if(verbose_spect)cout << "Iso=" <<Iso << "  " << nicecode[Imol-1][Iso-1]  <<endl;
+          if(verbose_spect)cout << "nu="  << nu <<  "  "  << nu1 << "  " << nu2 << endl;
+          if(verbose_spect)cout << 10000/nu  << " " << lambda1X << " " << lambda2X<<  endl;
 
           linecentres[Iso-1].push_back(nu);
-          linestrengths[Iso-1].push_back(S_intense);
-          linegammaAir[Iso-1].push_back(gamma_air);
-          linegammaSelf[Iso-1].push_back(gamma_self);
-          lineLSE[Iso-1].push_back(LSE);
-          line_gp[Iso-1].push_back(gp);
-          line_gpp[Iso-1].push_back(gpp);
-
+          
           iss[3].str(entry[3]);
           iss[3] >> S_intense;
-           cout << "S_intense="  << S_intense<< endl;
+          linestrengths[Iso-1].push_back(S_intense);
+          if(verbose_spect)cout << "S_intense="  << S_intense<< endl;
+
+          // pick out the maximum line strength for each isotopologue
+          // and its index
+          ikount[Iso-1]++;
+          if(linestrengths[Iso-1][ikount[Iso-1]]>str_max[Iso-1]){
+                    str_max[Iso-1]=linestrengths[Iso-1][ikount[Iso-1]];
+                    istr_max[Iso-1]=ikount[Iso-1];
+          }
+
           iss[4].str(entry[4]);
           iss[4] >> Einstein_A;
-          cout << "Einstein_A="  << Einstein_A<< endl;
+          if(verbose_spect)cout << "Einstein_A="  << Einstein_A<< endl; //not used for local thermodynamic equilibrium
+
           iss[5].str(entry[5]);
           iss[5] >> gamma_air;
-          cout << "gamma_air="  << gamma_air<< endl;
+          linegammaAir[Iso-1].push_back(gamma_air);
+          if(verbose_spect)cout << "gamma_air="  << gamma_air<< endl;
+
           iss[6].str(entry[6]);
           iss[6] >> gamma_self;
-          cout << "gamma_self="  << gamma_self<< endl;
+          linegammaSelf[Iso-1].push_back(gamma_self);
+          if(verbose_spect)cout << "gamma_self="  << gamma_self<< endl;
+
           iss[7].str(entry[7]);
           iss[7] >> LSE;
-          cout << "LSE="  << LSE << endl;
+          lineLSE[Iso-1].push_back(LSE);
+          if(verbose_spect)cout << "LSE="  << LSE << endl;
+
           iss[8].str(entry[8]);
-          iss[8] >> Tdep_gamma_air;
-          cout << "Tdep_gamma_air="  << Tdep_gamma_air<< endl;
+          iss[8] >> T_depLorentz;
+          lineTdep[Iso-1].push_back(T_depLorentz);
+          if(verbose_spect)cout << "T_depLorentz="  << T_depLorentz<< endl;
+
           iss[9].str(entry[9]);
           iss[9] >> Press_shift;
-          cout << "Press_shift="  << Press_shift << endl;
+          lineShift[Iso-1].push_back(Press_shift);
+          if(verbose_spect)cout << "Press_shift="  << Press_shift << endl;
+
           // entry[10]=Upper state global parse according to classes 1 to 10 Table 3 HITRAN 2004
           // entry[11]=Lower state global parse according to classes 1 to 10 Table 3 HITRAN 2004
           // entry[12]=Upper state local  parse according to groups 1 to 6 Table 4 HITRAN 2004
@@ -1123,20 +1193,315 @@ int main(int argc, char* argv[]){
           } //endif for isotope less than nicemax
           iss[1].clear();
 
-          } //end while loop
+          } //end  if not end of file while loop
         fp_in.close();
+        //Finished reading in HITRAN data
         //At last we have the line centres for this particular gas.
+
+        cout << "Finished with PARFILE=" << PARFILE << endl;
         
+
+
+
+       for(int k=0; k<vecsize; k++){   //loop over isotopologues
+
+        int ig_fort=ig+1;  //gas and isotopoluge for BD_TIPS_2003.f
+        int k_fort=k+1;
+
+        int nlines=linecentres[k].size();
+
+     // we can  examine only the spectrum from nu1X to nu2X
+     // remember only line centres in this interval were pushed onto the linecentres[k]  vector!
+     //   
+     // Spectra for each layer top down --- see up_to_top and kountS
+        double TempNlay,PressNlay;  //temperature of layerm Nlay
+        double gee_i=0.0, QT=0.0;  // state independent degeneracy factor, Total internal partition sum
+        double Refgee_i;
+         //The line strengths are for a reference temperature of 296K
+         //BD_TIPS_2003 Routine provided by HITRAN.
+
+        bd_tips_2003_(ig_fort, RefTemp, k_fort, Refgee_i, QT);
+
+        for(int nlay=0; nlay < up_to_top; nlay++){
+            TempNlay=AvTemp[nlay];
+            PressNlay=AvPress[nlay];
+          //BD_TIPS_2003 Routine provided by HITRAN.
+
+            bd_tips_2003_(ig_fort, TempNlay, k_fort, gee_i, QT);
+           // cout << "gi=" << gee_i << "  QT=" << QT <<  endl;
+ 
+            double wavenumlines[nlines];    // temporary copies
+            double strengthlines[nlines];
+            double knaughtlines[nlines];
+            double alphaLorentzA[nlines];  //for air -add partial self and partial pressures later;
+            double alphaDop[nlines];
+            double widthlines[nlines];
+ 
+            
+
+            //First we find all the wave numbers at which to calculate
+            //the entire spectrum over nu1X to nu2X and stuff them in SpectrumWaves;
+            int kountwaves=0;  //wavelengths which are line centres
+            for(int l=0; l<nlines;l++){
+              if(QT>0){
+              wavenumlines[l]=linecentres[k][l];
+              //Voigt function needs half widths-not 1/e-hence log2
+              alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress)
+                          /Speedlight*sqrt(2.0*Boltz*TempNlay*log2/(AllMolW[ig][k]*nucleon));
+              alphaLorentzA[l]=linegammaAir[k][l]*AvPress[nlay]/RefPress*pow(RefTemp/TempNlay,lineTdep[k][l]);
+              strengthlines[l]=linestrengths[k][l]*QTref[ig][k]/QT
+                      *exp(-C2*lineLSE[k][l]/TempNlay)/exp(-C2*lineLSE[k][l]/RefTemp)
+                      *( 1.0-exp(-C2*linecentres[k][l]/TempNlay) )*( 1.0-exp(-C2*linecentres[k][l]/RefTemp) );
+              knaughtlines[l]=strengthlines[l]/alphaDop[l]*sqrtlog2opi;
+              }
+              else{
+                 cout << "Error: BD_TIPS_2003 returned QT=" << QT << endl;
+                 exit(1);
+              }
+              //now we have the x and y vectors for all the lines
+            }  //end loop over nlines
+
+
+            vector<double> SpectrumWaves; 
+            vector<int> CentreWaves;  //which values of nu in SpectrumWaves are at line centres?
+            vector<int> CentreLines;
+            SpectrumWaves.clear();
+            CentreWaves.clear();
+            CentreLines.clear();
+            double startnu,stepnu,tempnu,currentnu0,
+            currentwidth,currentwidthL,currentwidthD,nextnu0,last_stopnu, stopnu, Wtol;
+
+
+            Wtol=0.000001;  //because of fortran F12.6  for wave number in par file
+
+            int icurrent=0;
+            last_stopnu=nu1X;
+            bool skipline=false;
+            double midpoint;
+
+            while(icurrent < nlines){  //we get some "double lines" -skip the next line if it it's the same nu0
+              if(skipline){
+                 skipline=false;
+                 icurrent++;
+                 //we are just calculating where on the nu axis our fine detail spectrum is calculated
+                 //the two transitions with the same frequency have different widths and strengths
+                 //so it must appear in the CentreWaves list. It will be the last centre wave number.
+                 CentreWaves.push_back(CentreWaves.size()-1);
+                 CentreLines.push_back(CentreLines.size()-1);
+              }
+              else{
+                currentnu0=wavenumlines[icurrent];
+                if(icurrent<nlines-1){               
+                  nextnu0=wavenumlines[icurrent+1];
+                   if(currentnu0==nextnu0){
+                     skipline=true;
+                 }
+              }
+              
+              currentnu0=currentnu0-lineShift[k][icurrent]*AvPress[nlay]/RefPress;
+              nextnu0=nextnu0-lineShift[k][icurrent]*AvPress[nlay]/RefPress;
+              //set current width
+              currentwidthD=alphaDop[icurrent]*icutD;
+              currentwidthL=alphaLorentzA[icurrent]*icutL;
+              if(currentwidthL<currentwidthD){currentwidth=currentwidthD;}
+              else{currentwidth=currentwidthL;}
+          
+              stepnu=currentwidth/istep;
+              nu_cut=currentwidth;
+
+              widthlines[icurrent]=currentwidth;
+
+              if(currentnu0-nu_cut<last_stopnu)
+                   {
+                   startnu=last_stopnu+stepnu;
+                   }
+
+              else {startnu=currentnu0-nu_cut;}
+
+              tempnu=startnu;
+
+              while(tempnu<currentnu0-Wtol){   //step up to left of line which is first stopping point
+                SpectrumWaves.push_back(tempnu);
+                tempnu+=stepnu; kountwaves++;
+              }
+
+              //we have reached the line centre. The last +=stepnu in the while
+              //loop may have just stepped over so we don't actually want it. 
+              if(tempnu<currentnu0-Wtol){
+                   SpectrumWaves.push_back(currentnu0);
+                   CentreWaves.push_back(kountwaves);
+                   CentreLines.push_back(icurrent);
+                   kountwaves++;}
+              else{
+                   SpectrumWaves.pop_back();
+                   kountwaves--;
+                   SpectrumWaves.push_back(currentnu0);
+                   CentreWaves.push_back(kountwaves);
+                   CentreWaves.push_back(icurrent);
+                   kountwaves++;}
+
+              midpoint=(currentnu0+nextnu0)/2.0;
+              if(icurrent==nlines-1){               
+                  stopnu=currentnu0+nu_cut;
+              }//last line -- nothing to the right
+              else{
+                if(midpoint > currentnu0+nu_cut){
+                  stopnu=currentnu0+nu_cut;}
+                  else{
+                  stopnu=midpoint;}
+              }
+
+              tempnu=currentnu0; //start at line centre and step up
+              bool past_it=false;
+
+              while(tempnu<stopnu-Wtol && tempnu < nextnu0-Wtol){
+
+               tempnu+=stepnu;
+               if(tempnu>=nextnu0)past_it=true;
+               if(!past_it){
+                  SpectrumWaves.push_back(tempnu); 
+                  kountwaves++;}
+ 
+                        int idebug=kountwaves;
+                        if(idebug==26395){
+                             cout << "debug point\n";}
+           }  //got to next half way point or end of spectrum or lines so close
+              //that half way point+stepnu is past nextnu0
+           if(past_it){
+                  tempnu=tempnu-stepnu;
+                  past_it=false;
+                  SpectrumWaves.push_back(stopnu); 
+                  kountwaves++;
+           }
+           last_stopnu=tempnu;
+           icurrent++;
+              } //end of if else for skipline
+           }  //end of while icurrent < nlines
+
+           //chop this loop out once all the above thoroughly tested
+           int templength=SpectrumWaves.size();
+           for(int l=0; l<templength-1; l++){
+              if(l==0)
+              cout << "start of " << templength << " wave numbers--wave number=" << SpectrumWaves[l] << endl;
+              if(SpectrumWaves[l+1] <= SpectrumWaves[l]){
+                    cout << "Error at l=" << l << "  layer=" << nlay << "  Iso=" << k << endl;
+              }
+              if(l==templength-1)
+              cout << "end of " << templength << " wave numbers--wave number=" << SpectrumWaves[l] << endl;
+           }        
+
+           double xfac, yfac, xtemp, width, alphaD, alphaL;
+           int leftwaves, rightwaves, iwave, SpectrumSize;
+           int nulength=CentreWaves.size();
+           int speclength=SpectrumWaves.size();
+           
+           for(int l=0; l<nulength-1; l++){
+              currentnu0=wavenumlines[l]-lineShift[k][icurrent]*AvPress[nlay]/RefPress;
+              width=widthlines[l];   //cutoff from previous loop
+              alphaD=alphaDop[l];
+              alphaL=alphaLorentzA[l];
+              xfac=log2/alphaD;
+              yfac=alphaL/alphaD*log2; 
+              //Need to calculate Xvector for HUMLIK
+              //But it needs to be ordered. We will have a normal array (ordered)
+              // and a C++ vector (disordered)
+              vector <double> Xvector;
+              leftwaves=0; rightwaves=0; iwave=CentreWaves[l];
+
+              leftwaves=0;
+              //linecentre then everything within range on left
+              xtemp=SpectrumWaves[iwave-leftwaves];
+
+              while(xtemp>currentnu0-width && iwave-leftwaves>0){
+                   xtemp=SpectrumWaves[iwave-leftwaves];
+                   Xvector.push_back(xtemp); 
+                   leftwaves++;
+              } 
+
+             rightwaves=1;
+              //linecentre then everything within range on left
+              if(iwave+leftwaves<speclength-1){
+              xtemp=SpectrumWaves[iwave+rightwaves];
+
+              while(xtemp<currentnu0+width && iwave+rightwaves<speclength){
+                   xtemp=SpectrumWaves[iwave+rightwaves];
+                   Xvector.push_back(xtemp); 
+                   rightwaves++;
+              } 
+              } //endif
+
+              double XVEC[leftwaves+rightwaves],KVEC[leftwaves+rightwaves];
+              for(int j=leftwaves-1; j>0; j--){
+                  XVEC[leftwaves-1-j]=Xvector[j];
+              }
+                     
+           }  //end for loop over centre wavelengths
+ 
+
+
+
+          if(outspec){
 /*****************************************************************************************
-        Calculate Spectrum - Work out Distributions
+        Output Spectra if needed
+******************************************************************************************/
+        // for each isotopologue output files to MolSpect directory
+        // first --- the file names
+        // current gas=ig  --- Yep we are still in the ig loop!
+
+        string SpectFile;
+        SpectFile=AllMols[ig];
+        const string SpectDir("MolSpect");
+        SpectFile.replace(0, 11, SpectDir);
+        cout << SpectFile << endl;
+        ostringstream oss_outcode; //output file has isotopologue number and  layer number
+        int isorep1, isorep2;
+        if(Iso<10){
+           isorep1=Iso+48; //ASCII 0=48
+           oss_outcode <<  "_Iso_"  << (char)isorep1;
+          // cout << "Iso Number=" << Iso << "  character="<<  (char)isorep1 << endl;
+        }
+        if(Iso>=10){
+           int i1=Iso-10,i2=Iso%10;
+           isorep1=i1+48;
+           isorep2=i2+48;
+           oss_outcode <<  "_Iso_"  << (char)isorep1 << (char)isorep2;
+          // cout << "Iso Number=" << Iso << endl;
+         }
+
+         string modstring;
+         modstring=oss_outcode.str();
+         cout << modstring << endl;
+         int stringsize,ipos;
+         stringsize=SpectFile.size();
+         ipos=stringsize-4; //".dat" at the end
+         SpectFile.insert(ipos,modstring);
+         cout << SpectFile << endl;    
+         } //endif for outspec
+
+
+
+
+/*****************************************************************************************
+        Work out k Distributions
 ******************************************************************************************/
 
 
-/*****************************************************************************************
-       Write Input Files for Dors3
-******************************************************************************************/
 
-/****************************************************************************************/
+
+           
+
+                          
+           SpectrumWaves.erase(SpectrumWaves.begin(), SpectrumWaves.end());
+           CentreWaves.erase(CentreWaves.begin(), CentreWaves.end());
+           }  //end loop over layers nlay
+          } // end loop over isotopologues k=0, k< nicemax
+
+
+
+
+/****************************************************************************************
+        Clear memory
+******************************************************************************************/
         for(int i=0;i<vecsize;i++){
             cout << "gas humber=" << ig+1 << " Isotopologue=" << i+1 << "  code=" <<nicecode[ig][i]
                  << "  number of lines=" << linecentres[i].size()<< endl;
@@ -1145,11 +1510,17 @@ int main(int argc, char* argv[]){
                  linegammaAir[i].erase(linestrengths[i].begin(), linestrengths[i].end()); 
                  linegammaSelf[i].erase(linestrengths[i].begin(), linestrengths[i].end());  
                  lineLSE[i].erase(linestrengths[i].begin(), linestrengths[i].end());       
-                 line_gp[i].erase(linestrengths[i].begin(), linestrengths[i].end());     
-                 line_gpp[i].erase(linestrengths[i].begin(), linestrengths[i].end());            
+                 lineTdep[i].erase(linestrengths[i].begin(), linestrengths[i].end());     
+                 lineShift[i].erase(linestrengths[i].begin(), linestrengths[i].end());            
             }
+
       }
       //end loop over HITRAN par files ig=0 to ngas
+
+         } //endif for calcspec
+
+     //delete respval and lambdaresp - add later
+
 
 
   return 0;

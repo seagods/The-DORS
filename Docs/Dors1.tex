@@ -85,7 +85,8 @@ So, let's start a ``run through" of {\it Dors1} -v.
 On running {\it Dors1 -v}, the first information that you will be asked to enter concerns wavelengths.
 For most practical purposes some wavelength range is needed rather than just a single wavelength. It
 is quite often the case that we need to predict an instrument response, and this requires some
-model of an instrument.
+model of an instrument. Note that all wavelengths are the vacuum wavelengths and so are independent of the
+refractive index of the air.
 
 The very first thing we are prompted for is to whether we are using an {\it instrument response function} or not.
 What does this mean?  If we are modelling atmospheric radiation measurement by some specific real-world 
@@ -159,7 +160,7 @@ correlated-$\kappa$ data required by {\it Dors3} in a separate file.
 We may not wish to re-do these calculations and over-write that file for reasons discussed later.
 For now enter 1 as a response. If we are doing these calculations, we may want to examine the fine
 detailed spectra rather than just the few $\kappa$ values needed for the correlated-$\kappa$ method.
-We are prompted as to whether we want this output or not. For now, enter zero.
+We are prompted as to whether we want this output or not. These are large files, and if they aren't wanted, enter zero.
 
 
 We mentioned already that we are using a correlated-$\kappa$ approach, and this needs a quadrature rule
@@ -168,13 +169,28 @@ next prompt is for the order of quadrature rule. Enter 10, say.
 
 Now we are at the last part of the wavelength input. We change over to the more usual spectroscopic units
 of {\it per cm} or $cm^{-1}$. So $10^3 cm^{-1}$ corresponds to $10\mu m$ radiation, $10^4 cm^{-1}$ corresponds
-to 1$\mu m$ radiation, and so on. So, if we denote the wave number as $\nu (cm^{-1})$ and the wavelength as $\lambda (\mu m)$
-then $\nu=10^4/\lambda$. We make the trivial observation that $d \nu/\nu=-d \lambda / \lambda$.
+to 1$\mu m$ radiation, and so on. So, if we denote the wave number as $\tilde{\nu} (cm^{-1})$ and the wavelength as $\lambda (\mu m)$
+then $\nu=10^4/\lambda$. We make the trivial observation that $d \tilde{\nu}/\tilde{\nu}=-d \lambda / \lambda$.
 
 The molecular absorption calculations need a ``cut-off" which tells
 the program how far away from on an absorption line centre we need to calculate the absorption profile
 of the absorption line. It also needs a spectroscopic resolution (or step size) for the wavelength interval.
-We are prompted for these in turn. For now use $5 cm^{-1}$ for the cut-off, and $0.05 cm^-1$ for the step size.
+In fact we need to choose between the largest of two possible cut-off values. Each line has a Doppler and a Lorentz
+ half width, which we denote as $\alpha_D$ and $\alpha_L$ ($cm^{-1})$. 
+If we choose a cut-off integer $i_{CD}$ so that the cut-off for a pure Doppler line is $ i_{CD} \alpha_D$
+then the Doppler broadened line falls off as $\exp(-i_{CD}^2)$. So, for $i_{CD}=5$, the value of the line shape at the
+cut-off is roughly 0.7\% of the value at the line centre. 
+If we choose a cut-off integer $i_{CL}$ so that the cut-off for a pure Lorenz line is $ i_{CL} \alpha_L$
+then the Lorentz line falls off as $1/(1+i_{CL}^2$). So, for $i_{CL}=12$, the value of the line shape at the
+cut-off is also roughly 0.7\% of the value at the line centre. If it is required that more of the line is within
+the cut-off, then we need to increase $i_{CL}$ more than $i_{CD}$ since the Doppler profile falls off much more rapidly
+than the Lorentz profile. The actual value of the cut-off is to taken as whichever value of $i_{CD} \alpha_D$
+ and $i_{CL} \alpha_{DL}$ is largest. We need another integer for the spectral resolution. When calculating the spectra
+we shall use $\Delta \nu$ as the cutoff value divided by $istep$. These three integers
+ are prompted for when $Dors1$ is run in verbose mode. The prompts are,
+ "Enter (integer) number of linewidths for cut-off for a Lorentz profile"; "Enter (integer) number of linewidths for cut-off for a Doppler profile"; "Enter istep (integer that sets the resolution for each line --- make it 10 or more)".
+
+
 
 \subsection{Layers and Aerosols}
 
@@ -280,16 +296,10 @@ pre-defined profiles to take this into account. You are prompted as to whether y
 and/or temperature data. You will be prompted further if you say you do. If you enter
 your own ground pressure that is say, 1.05 times the pressure at the ground
 in the chosen profile, this will scale the entire column pressure by 1.05. If you enter a ground
-temperature, then the temperature at the ground ($T[0]$ is changed to $groundTemp$, and the
-temperature at 1km ($T[1]$ is set to $[T[1]*groundTemp/T[0]$  --- all other temperatures are unchanged. For now, just
+temperature, then 
+temperature at 1km ($T[1]$) is set to $T[1]\times T_{ground}/T[0]$, the temperature
+ at the ground ($T[0]$) is changed to $T_{ground}$, and the all other temperatures are unchanged. For now, just
 enter zero so that the pre-defined profiles are unchanged.
-
-It is envisaged that you might want to use the {\it Dors} to simulate aircraft remote sensing
-experiments as does 6S \cite{6S:MyBib}. The radiative transfer calculations are all done
-in terms of optical depth, so {\it Dors1} will need to find where the aeroplane is
-in terms of optical depth as calculated from the aeroplane height (above Sea level). If you select
-aeroplane remote sensing you are prompted for a height. Select zero when prompted as to whether you want to do
-aeroplane remote sensing for now.
 
 Other things that may vary are the height of the ground, the thickness of the boundary layer,
  the height of the troposphere, and so on. You are next prompted as to whether you want to
@@ -304,9 +314,9 @@ So, we have finished our first run-through of {\it Dors1 -v} and this has create
  {\it Dors1in.dat}. Look at the following example.
 \begin{verbatim}
 0.500000 0.600000 0 
-1
+1   0
 10
-5.000000 0.050000
+5  12 10
 1 40.000000 20.000000
 1 2 3 4
 2
@@ -321,10 +331,15 @@ In the first line, we have $\lambda_1$, $\lambda_2$, and the bool which tells us
 we are using a response function file. If we are using a response function, the two wavelengths
 will be reset by the first and last wavelengths in the response function file, but two dummies are still required as input in
 {\it Dors1in.dat}. The 1 on the next line tells us that we are to calculate new molecular absorption
-files and not use the results of any previous calculation. The 10 on the next line tells us that we are using
+files and shall not use the results of any previous calculation, the 0 tells us that we are not writing out
+ the absorption coefficient spectrum for each gas in each layer.
+The 10 on the next line tells us that we are using
 10 point Gauss quadrature for the integration over the cumulative-$\kappa$ distribution for calculating non-grey 
-radiative transfer. The next line ends the wavelength related inputs, and tell us we have a cut-off of $5 cm^{-1}$
- and a step size of $0.05 cm^{-1}$.
+radiative transfer. The next line ends the wavelength related inputs, and are related to the sum of the
+Lorentz and Doppler half widths at half maximum or ten times what we shall call the ``total half width"
+The line tells is we have a Doppler cut-off of 5 times the Doppler half width, a pressure broadening 
+cut-off of 12 times and Lorentz half width. The program select the largest of these two cut-offs,
+ and the step size shall be the cut-off divided by 10.
 
  The next line has three numbers. The 1 tells us we have chosen to
  use visibilities,  and have chosen a tropospheric visibility of 40km and a boundary layer visibility
@@ -371,18 +386,19 @@ are two (silly) numbers for
 temperature and pressure. These have to be there regardless, even though we have no information
 on temperature and pressure. Because we have entered 0 for the option, they won't be used.  
 (Make them negative to make it obvious they are not to be used.)
-Similarly, the next line has a zero to indicate that we are not simulating an aeroplane.
-Nevertheless, we must include an aeroplane  height on this line.  Again we have made it a large negative
-value to make it clear it isn't used in this case.
 
 The next line starts with a 1, indicating that we are using the default heights for
 the ground, the boundary layer, tropopause, stratopause, and Top Of Atmosphere (TOA).
 This is followed by four numbers. If you have chosen the defaults, these numbers will be
-the default values of 0, 2, 10, 30, and 120.
+the default values of 0, 2, 10, 30\footnote{The {\it actual} stratopause is close to 50km - these are
+$LOWTRAN$ aerosol regions: the $LOWTRAN$ stratosphere is not the physical stratosphere...}, and 120.
 
 The last line is the order of the Gauss-Legendre quadrature rule for integrations
 over height which is 4. So we have finished our ``run through" of {\it Dors1}. Now we know what to input, and what it means, we
 can begin to see what {\it Dors1in.dat} actually does and how it does it.
+
+
+
 
 \section{The Atmospheric Data}
 
@@ -390,6 +406,11 @@ We have seen we have six default atmospheres to choose from. The first is tropic
 are mid latitude (45N) and sub-Arctic (60N)  Summer and Winter, then the last is the U. S. 1976 standard. 
 We also have the possibility of a user defined atmosphere.
 You will see that the {\it Dors} directory contains a sub-directory  called {\it Atmospheres}.
+This has a subdirectory called {\it StartMols}. Copy everything in {\it StartMols} to {\it Atmospheres}.
+(We may make changes made to the data files in the {\it Atmospheres} directory  --- and {\it StartMols}
+can be used to reset the changes.)
+
+
 This contains a file called {\it Alts.dat} containing the number of altitudes defining
 the atmospheric profiles and then one line for each altitude. Then we have the files
 {\it Temps1.dat} to {\it Temps6.dat} which contain the temperature profiles for the six default atmospheres
@@ -428,7 +449,7 @@ This accounts for gases 1-7. What about the rest? Are these highly variable?
  To quote \cite{ConstProfs:Mybib} ``{\it Molecules 8-28 are provided
 as single representative profiles. Their natural variability can be very different from the selected 
 profiles.}" If, for instance you want to experiment with the profiles, just overwrite the ones provided
-with your own! The {\it Atmospheres} directory contains a sub-directory called {\it StartMols}. This contains
+with your own! Recall that {\it Atmospheres} directory contains a sub-directory called {\it StartMols} which  contains
 a copy of all the profiles that {\it Dors1} came with originally. Once you have finished, you can just reset 
  the profiles you have experimented with according to the originals. 
 
@@ -643,8 +664,6 @@ split into sub-layers. If the aerosols change and/or the ground reflectance chan
  choose 0. Of course, if you know that molecular absorption is negligible
  or zero for your wavelength interval then set all the {\it GasMask} entries to zero in the first place.
 
-
-
 \section{Aerosol Models}
 
 Though users may define their own aerosol models, we have performed the Mie calculations on several standard 
@@ -816,6 +835,380 @@ large error in extinction coefficient as a function of wavelength.
 \newpage
 
 \appendix
+
+\section{Voigt Profiles and $\kappa$-Distributions} 
+
+\subsection{Non Grey Absorption}
+
+In many cases, the absorption of light can be modelled adequately
+using Beer's law. Here the transmittance of light, with a wavelength
+range of $\lambda$ to $\lambda+\Delta \lambda$, and through a mass
+of gas $m$ with an absorption coefficient $\kappa$ is given by
+\begin{equation}
+    T=exp(-\kappa\>m).
+\end{equation}
+The assumes that all photons in the wavelength range ``see" the same
+$\kappa$. When this is true the material is said to be ``grey".
+If $\kappa$ varies very rapidly as a function of wavelength
+then Beer's law cannot apply, and the material is said to be ``non-grey".
+In atmospheric applications $m$ is usually given in terms of molecules
+ per square centimetre, and so $\kappa$ has units of area.
+
+
+The function $\kappa(\tilde{\nu})$ is obtained from
+\begin{equation}
+    \kappa(\tilde{\nu},p,T)=\sum^I S_I(\tilde{\nu},T) f_I(\tilde{\nu},p,T),
+\end{equation}
+where $\kappa$ is the absorption coefficient $(cm^{2})$, $S_I$
+is the line intensity $(cm)$ of the $I$th line, and $f_I$
+is the normalised line shape for the $I$th line.
+The units given here are appropriate for use with the HITRAN database
+\cite{RothmanETAL:Mybib}.
+(This can be obtained via the website http://cfa-www.harvard.edu/hitran.)
+Other variables are the (vacuum) wavenumber $\tilde{\nu}$ $(cm^{-1})$, the temperature $T$ (Kelvin),
+and pressure $p$ ($Pa$). For an individual line, centred at $\tilde{\nu}_0$, 
+\begin{equation}
+    \kappa(\tilde{\nu},p,T)=\kappa_0 V(x,y)=  \kappa_0 \frac{y}{\pi} \int_{-\infty}^{\infty} \frac{exp(-t^2)}{y^2+(x-t)^2} d\>t.
+\end{equation}
+Here V(x,y) is the {\it Voigt function} and $\alpha_D$ is the half width for Doppler broadening. This is a convolution of the
+Doppler and Lorentz profiles. The details of the calculation of this function and the {\it HUMLIK} program
+ are given by Wells \cite{BobWells:Mybib}.
+
+In this notation, if $S(T)$ is the temperature dependent line strength, 
+\begin{equation}
+   \kappa_0= \frac{S(T)}{\alpha_D(T)} \sqrt{\frac{ln2}{\pi}},
+\end{equation}
+\begin{equation}
+   x= \frac{\tilde{\nu}-\tilde{\nu}_0}{\alpha_D(T)} \sqrt{ln2},
+\end{equation}
+\begin{equation}
+   y= \frac{\alpha_L(p,T)}{\alpha_D(T)} \sqrt{ln2}.
+\end{equation}
+The Doppler width (half width at half maximum) $\alpha_D$ and the Lorentz width $\alpha_L$ are given by
+\begin{equation}
+   \alpha_D(T)= \frac{\tilde{\nu}_0}{c}\sqrt{ \frac{ 2 k T}{m}ln 2}, 
+\end{equation}
+and 
+\begin{equation}
+   \alpha_L(p,T)= \alpha_L(p_0,T_0)\frac{p}{p_0} \left ( \frac{T_0}{T} \right)^n.
+\end{equation}
+There are slightly differing formula depending on whether the width is half or full, or whether
+the value of Doppler width is quoted at half maximum of $1/e$ of the maximum; some authors
+incorporate the $y/\pi$ into $\kappa_0$ but this form leaves the $V$ function un-normalised.
+ Also $c$ is the speed of light {\em in vacuo} ($ cm s^{-1}$), $k$ is Boltzmann's
+constant $(J K^{-1})$, and $m$ is the mass of the molecule ($kg$). Lastly $p_0$ and $T_0$
+are reference pressures and temperatures, and $n$ is a dimensionless 
+coefficient of temperature dependence. In the lower atmosphere, where pressure broadening dominates over Doppler
+broadening, $k$ can be approximated by the Lorenz profile
+\begin{equation}
+    \kappa(\tilde{\nu},p,T)=\frac{S(T)}{\pi} \frac{\alpha_L}{ (\tilde{\nu}-\tilde{\nu}_0)^2+\alpha_L^2}.
+\end{equation}
+In the upper atmosphere, Doppler broadening dominates over pressure broadening, which has a line shape
+\begin{equation}
+    \kappa(\tilde{\nu},p,T)=\frac{S(T)}{\alpha_D \sqrt{\pi}}  \exp{\left (-\frac{(\nu-\nu_0)^2}{\alpha^2_D}\right )}. 
+\end{equation}
+Depending on $x$ and $y$, the $HUMLIK$ code may use either the Lorentz or the Doppler profile rather
+than the more expensive process of  calculating the integral. The integral will be calculated for $x$ and $y$ values
+that indicate that neither Doppler or pressure broadening dominate completely.
+
+
+The line intensity's temperature dependence, for a transition from state $\eta$
+to $\eta^\prime$ is given by
+\begin{equation}
+    S_{\eta \eta^\prime}=\frac{h \tilde{\nu}_{\eta \eta^\prime}}{c}\frac{n_\eta}{N}
+\left ( 1-\frac{g_\eta n_{\eta^\prime}}{g_{\eta^\prime} n_\eta} \right ) B_{\eta \eta^\prime}.
+\end{equation}
+The prime demotes the upper state, the $g$s are state statistical weights, the
+$n$'s are the state populations and N is the molecular number density. The
+transition frequency converted to wavenumber is $\tilde{\nu}_{\eta \eta^\prime}$, and $B$ is
+the Einstein $B$ coefficient. In thermodynamic equilibrium this simplifies to
+\begin{equation}
+    S(T)_{\eta \eta^\prime}=S(T_0)\frac{Q(T_0)}{Q(T)} 
+\frac{exp(-c_2 E_\eta /T) \left (1-exp(-c_2 \tilde{\nu}_{\eta \eta^\prime}/T) \right )}
+{exp(-c_2 E_\eta /T_0) \left (1-exp(-c_2\tilde{\nu}_{\eta \eta^\prime}/T_0) \right )}.
+\end{equation}
+Here $E_\eta$ is the lower state energy, $c_2$ is the second radiation
+constant $=h c / k$, and $Q(T)$ is the partition function. The latter
+is supplied as a table in HITRAN, and the lower state energy is also provided.
+The Lorentz width is obtained from
+\begin{equation}
+\alpha(T,p)= \left (\frac{T_0}{T} \right )^n \left ( \alpha_{air}(p_0,t_0) 
+\left (\frac{p-p_s}{p_0} \right) +\alpha_{self}(p_0,t_0) \frac{p_s}{p_0} \right ),
+\end{equation}
+where  $\alpha_{air}(p_0,t_0), \> \alpha_{self}(p_0,t_0)$, and $n$ are taken from HITRAN
+tables, and $p_s$ is the partial pressure. This is a more complicated version of eqn.8
+which takes into account the collisions between molecules of the same species
+which have a larger effect than collisions with different species due to
+resonances; this is most important for oxygen.
+
+
+Suppose more is required than just the direct transmittance $T$, and
+wanted to find the radiance field at the TOA (Top Of Atmosphere) say.
+It is possible, given the solar spectral irradiance curve, to find
+the radiance in a given direction, for a particular solar position.
+
+
+An earlier method of coping with the non-grey nature of the atmosphere was to use band models. These are dealt with in well known books by Goody, and by Liou
+ \cite{Liou:Mybib} \cite{GoodyYung:Mybib}. In some applications these have the merit of capturing the non-grey nature of the atmospheric radiation in tables which are small in size. However, where multiple scattering calculations are required the band models in themselves are of no use. 
+
+If greater accuracy is required and/or multiple scattering takes place, other 
+methods must be used. Exponential sum fitting is one approach 
+\cite{WisEvans:Mybib}. An early approach was to calculate the photon path length distribution \cite{WMIrvine:Mybib}  \cite{BakanQuenzel:Mybib} \cite{BakanKoepke:Mybib}. It was realised that this was related to the inverse Laplace transform of the atmospheric transmittance. That is, the $\kappa$ distribution function is the inverse Laplace transform of the atmospheric transmittance with the mass of gas as the transform variable.
+\begin{equation}
+T(m)=\int_0^\infty f(\kappa) e^{-\kappa m} \> d \kappa
+\end{equation}
+Then the  inverse transform  $f(\kappa)$ is known as the $\kappa$ distribution.
+
+The $\kappa$ distributions of the Malkmus band model are given by Goody\cite{Goody:Mybib}. The $\kappa$ distribution for the exponential band model is given by Domoto \cite{Domoto:Mybib}, and by Godsalve 
+\cite{GodsalveBand:Mybib} in a form that is far more efficient for computation.
+
+If more accuracy is required we must then return to the actual details of the spectra. We must directly calculate the $\kappa$ distribution, and in a multiple layer atmosphere with varying temperature and pressure, we must use the cumulative distribution as discussed below.
+
+
+
+\subsection{The $\kappa$- and Correlated-$\kappa$ approach}
+
+The correlated $\kappa$ approach is given in some detail in \cite{GoodyWest:Mybib} \cite{LacisOinas:Mybib} \cite{FuLiou:Mybib} \cite{RoseKratz:Mybib} \cite{
+MarinBuckuis:Mybib}. We shall just look at the basic principles here.
+
+On looking at Fig.3, it can be seen that the same values of $\kappa$ are repeated
+many times over. Therefore, if only an average of many calculations is required
+rather than the full detail of Fig.2, it is clear that there is an opportunity
+for reducing the number of calculations needed drastically.
+\newpage
+\vspace*{11cm}
+\begin{figure}[htb]
+\special{psfile=Fig3.ps vscale=64 hscale=71 hoffset=10 voffset=40}
+\caption{ The fraction of photons that ``see" an
+absorption coefficient between $\kappa$ and $\kappa+ \Delta \kappa$.}
+\end{figure} 
+
+So, if   radiance values were calculated for one wavelength
+with an absorption coefficient of $\kappa$, then several other wavelengths
+have values of $\kappa$ very close to this value, and as an approximation, they
+can be lumped together in order to save CPU time (which can be considerable). If this is done for the
+whole range of $\kappa$ values in the interval, then each radiance
+must be added in a weighted sum. The weight is simply the fraction of the
+$\lambda$ interval that represents the subinterval of $\kappa$ in the weighted 
+sum. In other words the weight is the probability that a photon picked at
+random wavelength between $\lambda$ and $\lambda+\Delta \lambda$ `sees' 
+an absorption coefficient between $\kappa$ and $\kappa+\Delta \kappa$.
+If $Q$ is any radiative quantity, then in the continuum limit, the average
+$\overline{Q}$ is given by
+\begin{equation}
+    \overline{Q}=\int_0^\infty f(\kappa^\prime)  Q(\kappa) d \kappa
+\end{equation}
+where $f(\kappa^\prime)$ is the probability density of finding a 
+$\kappa$ in the range $\kappa$ and $\kappa+\Delta \kappa$.
+For instance, the transmittance is
+\begin{equation}
+    \overline{T}=\int_0^\infty f(\kappa^\prime) \> exp(-\kappa \>m) d \kappa.
+\end{equation}
+
+In practice, the integrals are replaced by discrete sums, and the function $f$ is also
+discrete.
+Suppose the function $\kappa_i(\lambda_i)$ is found for a large number
+of $i=1,N$ at evenly spaced intervals $\delta \lambda=\Delta \lambda / N$
+in the required wavelength range. 
+Even if $N$ is large enough to resolve the spectrum, there may be gaps 
+where the difference between successive $\kappa$ is larger than the
+chosen bin size for $\kappa$. These gaps are unpredictable, and the
+ same computer code must
+find the discrete probability density function for different gases,
+pressures and temperatures. Because of this, it is preferable to choose
+ that  $M$ regular bins  for the $\kappa$ (subscript $i$), and values of $\lambda$ (subscript $j$) so that
+the grid on $\lambda$ to $\lambda+\Delta \lambda$ is
+not  regular. Once this is done, we have $M$ values
+for $\kappa_i$ and an  n unpredictable $N^\prime$ values of $\lambda_j$. The
+
+\vspace*{12.5cm}
+\begin{figure}[htb]
+\special{psfile=Fig4b.eps vscale=64 hscale=71 hoffset=10 voffset=40}
+\caption{It is better to choose irregular bins over $\lambda$ and regular bins
+ over $\kappa$.}
+\end{figure} 
+
+
+
+The function $H_n$ is defined as follows.
+\begin{equation}
+   H_n=\left \lbrace 
+         \begin{array}{ll}
+ 1 & \mbox{if $n \delta \kappa < \kappa < (n+1) \delta \kappa$}  \\
+                0   &  \mbox{otherwise.}  
+         \end{array} \right \rbrace
+\end{equation}
+Here $n$ ranges from 0 to $M$. Thus, for any given $n$, the $\kappa$ distribution 
+function is given by
+\begin{equation}
+f(\kappa)\vert_{(n+1/2)\delta \kappa}=\frac{1}{\lambda_2-\lambda_1} \sum_{j=1}^{j=N^\prime} H_j(n) \delta \lambda_j,
+\end{equation}
+ which is the fraction of the wavelength interval that is represented by the $n$th bin.
+The $\delta \lambda$ are the fractions of the total wavelength range associated 
+with each of the $\lambda_i$. Clearly
+\begin{equation}
+\sum_{n=0}^{n=M} f_n=1.
+\end{equation}
+Given that a discrete approximation of $f(n)$ is calculated, the $\kappa$ distribution
+function can be used to calculate any radiative quantity via eqn.13. However there is
+a real snag. In a real atmosphere, there are variations in temperature and pressure
+as a function of height. In a single layer, it can be said that a certain fraction
+of photons see such and such a $\kappa$ value, but when these photons enter another
+layer at a different temperature and pressure, there is no way of saying what $\kappa$
+values should be assigned in the second layer. It has been shown that, for the Lorentz
+profile and a few others, that this problem can be overcome by using the cumulative
+distribution instead, i.e.
+\begin{equation}
+g(k)=\int_0^k f(\kappa^\prime) \> d \kappa^{\prime}.
+\end{equation}
+Then eqn.14 transforms into
+\begin{equation}
+\overline{T} =\int_0^1 exp(-\kappa(g) m) dg, 
+\end{equation}
+or in general
+\begin{equation}
+\overline{Q}= \int_0^1 Q(\kappa(g)) dg. 
+\end{equation}
+\vspace*{11.5cm}
+\begin{figure}[htb]
+\special{psfile=Fig5.ps vscale=64 hscale=71 hoffset=10 voffset=40}
+\caption{The two cumulative distributions correspond
+to different pressures and temperatures.}  
+\end{figure}
+So, for certain absorption line profiles, the $\kappa$ values used in a quadrature
+approximation to eqns.18 and 19 are 100\% correlated. All the photons that
+see the value of $\kappa_{1 \alpha}$ in one layer see the value $\kappa_{1 \beta}$
+in the other. Because of this, when the cumulative distribution is used rather than using the $\kappa$ distribution directly, the method may be described as the {\it correlated $\kappa$} method.  In general this is not exactly true, but the correlations
+are high enough for this correlated $\kappa$ method to be a good approximation. 
+
+\subsection{Snags}
+
+All seems well so far, but this is not the case if actual radiance values
+are needed in some wavelength interval. This is because the solar spectral
+irradiance $S(\lambda)$ will vary across the wavelength interval. what is more, if
+a prediction of a given instrument reading is required, the instrument response
+function $R_{esp}(\lambda)$. If exact calculations are required, each
+$\kappa$ value `sees' a whole range of response function values, so in a numerical
+approximation of eqn.18
+\begin{equation}
+\overline{T} =\sum_{p=1}^{p=P} w_p exp(-\kappa_p(g) m) 
+\end{equation}
+would  turn into a double summation
+\begin{equation}
+\overline{T} =\sum_{p=1}^{p=P} \sum_{q=1}^{q=Q} w_q w_p R_{esp \> q} exp(-\kappa_p(g) m) 
+\end{equation}
+in order to take into account the range of response function variation across each $\kappa_p$.
+This would then  turn into a triple sum when the solar variation was included.  This
+could easily turn out to be just as expensive as doing the fine detail calculations
+of Fig.2. Instead, we might use  the approximation that
+\begin{equation}
+\overline{T} =\sum_{p=1}^{p=P} \overline{R_{esp}\> S}_p w_p exp(-\kappa_p(g) m). 
+\end{equation}
+Here $\overline{R_{esp}\> S}_p$ is the mean value of the solar response 
+times the response function calculated for each $\kappa_p$. This goes some way
+to taking into account how the absorption coefficient varies across the
+response function.
+
+The final problem is how to deal with the radiance at the top of the atmosphere.
+\begin{equation}
+\overline{I} =\sum_{p=1}^{p=P} \overline{R_{esp}\> S}_p w_p I \left ({\kappa_p,R} \right ),
+\end{equation}
+where $R$ is the reflectance at the ground level. The problem here as things stand
+is that if $R$ varies with wavelength in the wavelength interval covered by
+the response function, then it is longer a matter calculating predefined 
+weights for a given problem. The solution of the radiative transfer problem itself
+depends on the reflectance spectrum as well as the $\kappa$ values
+inserted into each layer of atmosphere. What is needed is a list of what reflectance
+value, on average, is needed for each $\kappa_p$, then
+\begin{equation}
+\overline{I} =\sum_{p=1}^{p=P} \overline{R_{esp}\> S}_p w_p I \left ({\kappa_p,R_p}\right ).
+\end{equation}
+
+\subsection{How Dors1 Does the Calculations}
+
+We are using the $HUMLIK$ subroutine to calculate the line-shape. This has an input vector $X$ of
+ wave numbers and a
+corresponding output vector $K$. (The actual calculations are done in terms of wave number rather than wavelength,
+ but we shall still sometimes speak as if we were doing it wavelengths.)
+It would be nice if we could just calculate the $\kappa$ distribution for each
+line in the wavelength interval and add them all up to get the required $\kappa$ distribution.
+Unfortunately this won't work. To see this consider a spectrum consisting of just two overlapping Lorentz line shapes.
+ It is easy to show that the peaks of this ``toy spectrum" are not at the line centres of the individual
+lines. Not only that, the maximum value of $\kappa$ will be larger than the maximum value for each individual line.
+That is --- the spectrum has ``bins" of $\kappa_N \rightarrow \kappa_{N+1}$ (where $\kappa_N$ is $N$ times the bin size)
+ that the $\kappa$ distribution of the individual lines don't have: in other words, the $\kappa$ distribution for
+the spectrum is {\it not} the sum of the $\kappa$ distributions for each line.
+This means that we must find the $\kappa$ distribution from the detailed spectrum in each layer rather
+than considering $\kappa$ distributions of individual lines.  We shall swap over to wavenumber space in the following.
+
+The calculation of a spectrum present us with some difficulties.
+ First, the lines may not be equally spaced, and the width
+and strength may vary from line to line. Alongside this, Voigt function calculations can take up
+a lot of time. We do not want to use an extremely small but regular wavelength interval 
+in order to capture the spectrum. 
+
+Can we call $HUMLIK$ for each line and calculate the spectrum {for all the $x$ values
+passed to $HUMLIK$ for all the lines}? Suppose that a set of initial $X$ vectors (one for each line)
+consist of a
+the wavenumber of the line centre and equally spaced $x$ up to the cut-off on either side.
+Suppose that we call $HUMLIK$ to get the corresponding $K$ vectors for each line.
+Then we need a second set of  $X$ vectors which include the values of $x$ for all the lines
+on either side overlapping the current line. Suppose there is just one overlap and two lines.
+First we find an initial $X_{01}$ for line 1, and $X_{02}$ for line 2. Suppose we calculate the
+corresponding $K$ vectors. Now we call $HUMLIK$ again with an $X$ vector consisting of those
+$X_{02}$ that lie in the span of $X_{01}$ and add the new $K_{11}$ values to the pre existing $K_{02}$.
+There is a similar process for line 2. The thing is there may be many lines overlapping each other
+ --- especially for the slowly decaying Lorentz shapes. This is going to be a mess with just three
+overlapping lines. Quite apart from the mess, we shall need the $X$ values to be sorted which adds
+to the computational cost again. This doesn't appear to be an option after all. We could try
+things like interpolation and merging $x$ values that are very close together, but the author doubts
+ if it would be worth it.
+
+ Instead we might choose to adapt the wavelength interval according to
+the width of a close by line. If we do this, we shall find that our spectrum is calculated at different
+points (and numbers of points) from layer to layer as we move from the T.O.A. down to the ground 
+because of increasing pressure broadening. This is not a {\it real} difficulty as it is the $\kappa$
+distribution we are after. So we proceed as follows.
+\begin{verbatim}
+                1.  get first line's wavenumber.
+                2.  if( wavenumber-cutoff < nu1X ){start at nu1X}
+                    else{ start at wavenumber -cutoff}
+                3   nustep=width/istep
+                    loop{ over all lines     
+                     push nu to SpectrumWaves (C++ vector ) in steps of
+                     nustep up to line centre from start}
+                4.   push line centre to Spectrum waves
+                     if(line+cutoff < next line-next cutoff){
+                               next start=nextline-(its cutoff) 
+                               stop= line+cut off}
+                     else{
+                        if(next line - next cutoff < current nu+cutoff)
+                          {
+                          if(next line - 
+                                  next cutoff < half way to next line){
+                              start=current line
+                              stop=half way  between line and next line}
+                          }else{
+                              start=current line
+                              stop=next line- next cutoff
+                          }
+                     } 
+
+                5.   loop{continue stepping until stop
+                          adding to SpectrumWaves as we go along}
+                6.    change nustep according to next line width
+   
+                7.   line=next line
+ 
+                   }
+                8.  declare vector of kayvalues[SpectrumWaves.size] 
+                    and zero each element.
+\end{verbatim} 
+All we have is a set of wavelengths. We shall use these to get consecutive (ordered) $X$ vectors to call
+$HUMLIK$ with. We add the $K$ values to the appropriate elements of our $kayvalues$ array.
+So we have our spectrum with no need for sorting and (hopefully something like) a minimum of computational
+cost given our cut-off values and resolution given by istep. 
+
 
 
 \section{Atmospheric Profiles}
