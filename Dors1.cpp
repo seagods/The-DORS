@@ -23,6 +23,8 @@ void weightcoeff_(int*, double*, double*, double*, double*,
 
 //HITRAN Partition Function  --- note calling from c++ means all lower case
 void bd_tips_2003_(int&, double&, int&, double&, double&);
+
+void humlik_(int&, double*, double&, double*);
 }
 
 void Questioner( bool&,
@@ -1262,7 +1264,7 @@ int main(int argc, char* argv[]){
             }  //end loop over nlines
 
 
-            vector<double> SpectrumWaves; 
+            vector<double> SpectrumWaves; vector<double>SpectrumKays;
             vector<int> CentreWaves;  //which values of nu in SpectrumWaves are at line centres?
             vector<int> CentreLines;
             SpectrumWaves.clear();
@@ -1286,8 +1288,8 @@ int main(int argc, char* argv[]){
                  //we are just calculating where on the nu axis our fine detail spectrum is calculated
                  //the two transitions with the same frequency have different widths and strengths
                  //so it must appear in the CentreWaves list. It will be the last centre wave number.
-                 CentreWaves.push_back(CentreWaves.size()-1);
-                 CentreLines.push_back(CentreLines.size()-1);
+                 CentreWaves.push_back(CentreWaves[CentreWaves.size()-1]);
+                 CentreLines.push_back(CentreLines[CentreLines.size()-1]);
               }
               else{
                 currentnu0=wavenumlines[icurrent];
@@ -1337,7 +1339,7 @@ int main(int argc, char* argv[]){
                    kountwaves--;
                    SpectrumWaves.push_back(currentnu0);
                    CentreWaves.push_back(kountwaves);
-                   CentreWaves.push_back(icurrent);
+                   CentreLines.push_back(icurrent);
                    kountwaves++;}
 
               midpoint=(currentnu0+nextnu0)/2.0;
@@ -1378,17 +1380,22 @@ int main(int argc, char* argv[]){
               } //end of if else for skipline
            }  //end of while icurrent < nlines
 
-           //chop this loop out once all the above thoroughly tested
+
            int templength=SpectrumWaves.size();
+           double myzero=0.0;
            for(int l=0; l<templength-1; l++){
+              SpectrumKays.push_back(myzero);
+           //chop this next bit of loop out once all the above thoroughly tested
               if(l==0)
               cout << "start of " << templength << " wave numbers--wave number=" << SpectrumWaves[l] << endl;
               if(SpectrumWaves[l+1] <= SpectrumWaves[l]){
                     cout << "Error at l=" << l << "  layer=" << nlay << "  Iso=" << k << endl;
+                    exit(0);
               }
               if(l==templength-1)
               cout << "end of " << templength << " wave numbers--wave number=" << SpectrumWaves[l] << endl;
-           }        
+           }
+           SpectrumKays.push_back(myzero);        
 
            double xfac, yfac, xtemp, width, alphaD, alphaL;
            int leftwaves, rightwaves, iwave, SpectrumSize;
@@ -1406,35 +1413,73 @@ int main(int argc, char* argv[]){
               //But it needs to be ordered. We will have a normal array (ordered)
               // and a C++ vector (disordered)
               vector <double> Xvector;
+              vector <int>  ISpect;
+              Xvector.clear();
+              ISpect.clear();
               leftwaves=0; rightwaves=0; iwave=CentreWaves[l];
 
-              leftwaves=0;
               //linecentre then everything within range on left
               xtemp=SpectrumWaves[iwave-leftwaves];
+           //   cout << setprecision(11) << xtemp << endl;
+              Xvector.push_back(xtemp);
+              ISpect.push_back(iwave-leftwaves);
+              leftwaves++;              
 
               while(xtemp>currentnu0-width && iwave-leftwaves>0){
                    xtemp=SpectrumWaves[iwave-leftwaves];
+                   // cout << setprecision(11) << xtemp << endl;
                    Xvector.push_back(xtemp); 
+                   ISpect.push_back(iwave-leftwaves);
                    leftwaves++;
               } 
 
-             rightwaves=1;
+              rightwaves=1;
               //linecentre then everything within range on left
-              if(iwave+leftwaves<speclength-1){
-              xtemp=SpectrumWaves[iwave+rightwaves];
 
+              if(iwave+rightwaves<speclength-1){
+              xtemp=SpectrumWaves[iwave+rightwaves];
+              Xvector.push_back(xtemp); 
+              ISpect.push_back(iwave+rightwaves);
+              rightwaves++;
               while(xtemp<currentnu0+width && iwave+rightwaves<speclength){
                    xtemp=SpectrumWaves[iwave+rightwaves];
+                  // cout << setprecision(11) << xtemp << endl;
                    Xvector.push_back(xtemp); 
+                   ISpect.push_back(iwave+rightwaves);
                    rightwaves++;
               } 
-              } //endif
+              } //endif for going past spectrum limit
+              // the rightwaves block looks like a 1 to N vector, not a 0 to N-1 so shave 1 off rightwaves
+              rightwaves--;
+              int Nwaves=leftwaves+rightwaves;
 
-              double XVEC[leftwaves+rightwaves],KVEC[leftwaves+rightwaves];
-              for(int j=leftwaves-1; j>0; j--){
-                  XVEC[leftwaves-1-j]=Xvector[j];
+              double XVEC[Nwaves],KVEC[Nwaves];
+              for(int j=leftwaves-1; j>=0; j--){
+                  XVEC[leftwaves-1-j]=(Xvector[j]-Xvector[leftwaves-1])*xfac;
+                  KVEC[leftwaves-1-j]=0.0;
               }
-                     
+             for(int j=leftwaves; j< Nwaves; j++){
+                  XVEC[j]=(Xvector[j]-Xvector[leftwaves-1])*xfac;
+                  KVEC[j]=0.0;
+              }
+              //calculate voigt profile
+              humlik_(Nwaves, XVEC, yfac, KVEC);
+
+              for(int j=leftwaves-1; j>=0; j--){
+                  SpectrumKays[ISpect[leftwaves-1-j]]=SpectrumKays[ISpect[leftwaves-1-j]]
+                                                     +KVEC[leftwaves]*knaughtlines[l];
+                  cout << setprecision(11) << XVEC[leftwaves-1-j] << " K= " << KVEC[leftwaves-1-j] << " I="
+                       << leftwaves-1-j << "  J=" << ISpect[leftwaves-1-j] << endl;
+              }
+             for(int j=leftwaves; j< Nwaves; j++){
+                   SpectrumKays[ISpect[j]]=SpectrumKays[ISpect[j]]+KVEC[j]*knaughtlines[l];
+                   cout << setprecision(11) << XVEC[j] << " K= " << KVEC[j] << " I= " 
+                        << j <<  "  J=" << ISpect[j]  <<endl;
+              }
+
+
+              Xvector.erase(Xvector.begin(), Xvector.end());
+              ISpect.erase(ISpect.begin(), ISpect.end());                     
            }  //end for loop over centre wavelengths
  
 
@@ -1493,6 +1538,7 @@ int main(int argc, char* argv[]){
                           
            SpectrumWaves.erase(SpectrumWaves.begin(), SpectrumWaves.end());
            CentreWaves.erase(CentreWaves.begin(), CentreWaves.end());
+           CentreLines.erase(CentreLines.begin(), CentreLines.end());
            }  //end loop over layers nlay
           } // end loop over isotopologues k=0, k< nicemax
 
