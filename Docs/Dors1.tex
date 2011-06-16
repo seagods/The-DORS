@@ -162,6 +162,31 @@ For now enter 1 as a response. If we are doing these calculations, we may want t
 detailed spectra rather than just the few $\kappa$ values needed for the correlated-$\kappa$ method.
 We are prompted as to whether we want this output or not. These are large files, and if they aren't wanted, enter zero.
 
+If there are absorption lines in your wavelength intervals you might want to take a look at them and see
+if you have the right resolution in the spectrum given the cutoffs and resolutions you will choose in a moment.
+In this case you will need to choose to calculate the absorption spectra and choose to output the files.
+The shall be written to the {\it MolSpect} directory. Note that if you want to keep these files, you must create
+a subdirectory within {\it MolSpect} and move them there. If you have previously calculated spectra in the 
+{MolSpect} directory, {\it Dors1} will refuse to overwrite them and exit. You have to delete them
+ or move them to a subdirectory (or elsewhere) before you calculate a new spectrum.
+
+You may want to see what
+the spectra look like. You quite probably have software to plot the spectra, if not you might choose to
+ get {\it PlotIt} which is one of my own graphics programs \footnote{git@github.com:seagods/PlotFiles.git}.
+If you decide to use PlotIt, the files containing the spectra have to be output in a particular way
+with line colours, styles, and so on, specified in the data files.
+For this reason you are prompted as to whether or not you are using {\it PlotIt}. If not, the output file
+format is one line containing the number of layers, one line containing the number of points, then that line is
+followed by that number of $(x,y)$ pairs. This is followed by one line containing the number of points in the spectrum
+of the next layer and so on. There is one file for each isotopologue of each gas. You are next prompted as to whether
+or not you want to output to be the log (base 10) of the cross section as a function of wavenumber.
+
+Now, we have included an unusual fetaure in {\it The-DORS} in that it has the capability  in that it
+ can calculate the refractive index
+as a function of wavenuber via the Kramers-Kronig relations \cite{KronKram1:mybib}. This is an expensive
+computation. You are therefore prompted as to whether or not you want to do this, and whether or
+not you want to output the fine refractive index spectrum files in the same way as the cross-section files.
+
 
 We mentioned already that we are using a correlated-$\kappa$ approach, and this needs a quadrature rule
 for integrating over the cumalative-$\kappa$ distribution function. We do this using Gauss quadrature, and the
@@ -186,7 +211,7 @@ cut-off is also roughly 0.7\% of the value at the line centre. If it is required
 the cut-off, then we need to increase $i_{CL}$ more than $i_{CD}$ since the Doppler profile falls off much more rapidly
 than the Lorentz profile. The actual value of the cut-off is to taken as whichever value of $i_{CD} \alpha_D$
  and $i_{CL} \alpha_{DL}$ is largest. We need another integer for the spectral resolution. When calculating the spectra
-we shall use $\Delta \nu$ as the cutoff value divided by $istep$. These three integers
+we shall use $\Delta \nu$ as the halfwidth value divided by $istep$. These three integers
  are prompted for when $Dors1$ is run in verbose mode. The prompts are,
  "Enter (integer) number of linewidths for cut-off for a Lorentz profile"; "Enter (integer) number of linewidths for cut-off for a Doppler profile"; "Enter istep (integer that sets the resolution for each line --- make it 10 or more)".
 
@@ -310,11 +335,13 @@ The last thing that we are prompted for is the order of the
 aerosol region. 
 You will need to experiment with how the results vary with the order of the quadrature rule. For now, just choose 4.
 
+\section{An example Input File}
+
 So, we have finished our first run-through of {\it Dors1 -v} and this has created a record of our input in
  {\it Dors1in.dat}. Look at the following example.
 \begin{verbatim}
 0.500000 0.600000 0 
-1   0
+1 1 1 1 1 1
 10
 5  12 10
 1 40.000000 20.000000
@@ -330,9 +357,12 @@ So, we have finished our first run-through of {\it Dors1 -v} and this has create
 In the first line, we have $\lambda_1$, $\lambda_2$, and the bool which tells us whether
 we are using a response function file. If we are using a response function, the two wavelengths
 will be reset by the first and last wavelengths in the response function file, but two dummies are still required as input in
-{\it Dors1in.dat}. The 1 on the next line tells us that we are to calculate new molecular absorption
-files and shall not use the results of any previous calculation, the 0 tells us that we are not writing out
- the absorption coefficient spectrum for each gas in each layer.
+{\it Dors1in.dat}. There are six values of siz bools on the next line. This tells us that we are to calculate new molecular absorption files and shall not use the results of any previous calculation, the next 1 tells us that we are writing out
+ the absorption coefficient spectrum for each gas in each layer. The next 1 tell us that we are using
+the $PlotIt$ program, the next 1 is that it is a  log plot, the next 1 says we are calculating the refractive index, 
+ and the last 1 tells us we are writing out
+refractive index spectra. More usually that line would be "1 0 0 0 0 0". There must be six values on this line.
+ 
 The 10 on the next line tells us that we are using
 10 point Gauss quadrature for the integration over the cumulative-$\kappa$ distribution for calculating non-grey 
 radiative transfer. The next line ends the wavelength related inputs, and are related to the sum of the

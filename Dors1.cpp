@@ -1,3 +1,28 @@
+//-------------------------------------------------------------------------------
+// Copyright 2011 Christopher Godsalve.
+// All Rights Reserved.
+//
+// Permission to use, copy, modify and distribute this software (if not modified) and its
+// documentation for educational, research and non-profit purposes, without fee,
+// and without a written agreement is hereby granted, provided that the above
+// copyright notice, this paragraph and the following three paragraphs appear in all copies.
+// 
+//
+// To request permission to incorporate this software into commercial products
+// contact Dr C. Godsalve, 42 Swainstone Road, Reading, Berks, UK or by email at
+// seagods@btinternet.com or seagods@hotmail.com.
+//
+// IN NO EVENT SHALL CHRISTOPHER GODSALVE BE LIABLE TO ANY PARTY FOR
+// DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING 
+// LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, 
+// EVEN IF CHRITOPHER GODSALVE HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+//
+// CHRISTOPHER GODSALVE SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+// PURPOSE. THE SOFTWARE PROVIDED HEREUNDER IS ON AN `AS IS' BASIS, AND CHRISTOPHER 
+// GODSALVE HAS NO OBLIGATIONS TO PROVIDE MAINTAINANCE, SUPPORT, UPDATES, 
+// ENHANCEMENTS, OR MODIFICATIONS IF HE CHOOSES NOT TO DO SO.
+//--------------------------------------------------------------------------------
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
@@ -7,6 +32,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <sys/stat.h>
 using namespace std;
 
 // slatec fortran cubic spline routines
@@ -33,7 +59,8 @@ void Questioner( bool&,
                 int&, int&, int&, bool&, bool&, bool&, 
                 int&, double&, double&,
                 bool&, double&, double&, double&, double&, double&, int&, 
-                bool&, bool &, int&, int&, int&, int&,
+                bool&, bool&, bool&, bool&, bool&, bool&,
+                int&, int&, int&, int&,
                 const char*);
 
 void WaterVap(double* , double* , double* ,
@@ -97,6 +124,12 @@ int main(int argc, char* argv[]){
   double nu_cut; int icutL, icutD, istep;   //wave number cutoffs and spectral resolution
   const char* ReadInput;      //name of input file
   const char* RespFile;       //name of response function file
+
+
+  bool PlotIt; //if we are using PlotIt need to format the output for this plotting routine
+  bool logplot; //if we are outputing the log of the cross section
+  bool calcRef; //calculate refractive index spectrum
+  bool outRef;  // output refractive spectrum files
   
 
    // First off we read in the user input, whether 
@@ -157,7 +190,8 @@ int main(int argc, char* argv[]){
               itypes, itypet, itypeb, ocean, groundP, groundT,
               ihumid, groundtemp, groundpress,
               default_pause, HG, HB, HT, HS, HU, ngauss_height, 
-              calcspec, outspec, ngauss_correlkay, icutL,icutD,istep,
+              calcspec, outspec, PlotIt, logplot, calcRef, outRef,
+              ngauss_correlkay, icutL,icutD,istep,
               ReadInput);  
 
     int nresp;
@@ -1223,7 +1257,7 @@ int main(int argc, char* argv[]){
          //BD_TIPS_2003 Routine provided by HITRAN.
 
         bd_tips_2003_(ig_fort, RefTemp, k_fort, Refgee_i, QT);
-
+        ofstream OutSpect;
         for(int nlay=0; nlay < up_to_top; nlay++){
             TempNlay=AvTemp[nlay];
             PressNlay=AvPress[nlay];
@@ -1284,12 +1318,33 @@ int main(int argc, char* argv[]){
             while(icurrent < nlines){  //we get some "double lines" -skip the next line if it it's the same nu0
               if(skipline){
                  skipline=false;
-                 icurrent++;
+                 //icurrent has already been incremented
+
                  //we are just calculating where on the nu axis our fine detail spectrum is calculated
                  //the two transitions with the same frequency have different widths and strengths
                  //so it must appear in the CentreWaves list. It will be the last centre wave number.
                  CentreWaves.push_back(CentreWaves[CentreWaves.size()-1]);
                  CentreLines.push_back(CentreLines[CentreLines.size()-1]);
+                 //current nu0 is the same as last nu0's
+                 currentnu0=wavenumlines[icurrent];
+                 if(icurrent<nlines){
+                    nextnu0=wavenumlines[icurrent+1];}
+                 currentnu0=currentnu0-lineShift[k][icurrent]*AvPress[nlay]/RefPress;
+                 //set current width
+                 currentwidthD=alphaDop[icurrent]*icutD;
+                 currentwidthL=alphaLorentzA[icurrent]*icutL;
+                 int whichcut;
+                //widthlines[icurrent] has not been initialised.
+                //It could contain any garbage imaginable.
+                 if(currentwidthL<currentwidthD){
+                       currentwidth=currentwidthD;
+                       whichcut=icutD;}
+                 else{
+                     currentwidth=currentwidthL;
+                     whichcut=icutL;}
+
+                     widthlines[icurrent]=currentwidth;
+                     icurrent++;
               }
               else{
                 currentnu0=wavenumlines[icurrent];
@@ -1297,18 +1352,23 @@ int main(int argc, char* argv[]){
                   nextnu0=wavenumlines[icurrent+1];
                    if(currentnu0==nextnu0){
                      skipline=true;
-                 }
-              }
+                   }
+                }
               
               currentnu0=currentnu0-lineShift[k][icurrent]*AvPress[nlay]/RefPress;
-              nextnu0=nextnu0-lineShift[k][icurrent]*AvPress[nlay]/RefPress;
               //set current width
               currentwidthD=alphaDop[icurrent]*icutD;
               currentwidthL=alphaLorentzA[icurrent]*icutL;
-              if(currentwidthL<currentwidthD){currentwidth=currentwidthD;}
-              else{currentwidth=currentwidthL;}
+              int whichcut;
+              if(currentwidthL<currentwidthD){
+                    currentwidth=currentwidthD;
+                    whichcut=icutD;}
+              else{
+                    currentwidth=currentwidthL;
+                    whichcut=icutL;}
           
               stepnu=currentwidth/istep;
+              stepnu=stepnu/whichcut;
               nu_cut=currentwidth;
 
               widthlines[icurrent]=currentwidth;
@@ -1341,11 +1401,24 @@ int main(int argc, char* argv[]){
                    CentreWaves.push_back(kountwaves);
                    CentreLines.push_back(icurrent);
                    kountwaves++;}
-
-              midpoint=(currentnu0+nextnu0)/2.0;
+              bool double_last_line=false;
+              if(!skipline){
+                 midpoint=(currentnu0+nextnu0)/2.0;}
+              else{
+                 if(icurrent+2<nlines){
+                   nextnu0=wavenumlines[icurrent+2];
+                 }
+                 else{
+                   double_last_line=true;
+                 }
+                 midpoint=(currentnu0+nextnu0)/2.0;
+              }
               if(icurrent==nlines-1){               
                   stopnu=currentnu0+nu_cut;
               }//last line -- nothing to the right
+              if(double_last_line){
+                  stopnu=currentnu0+nu_cut;
+              }
               else{
                 if(midpoint > currentnu0+nu_cut){
                   stopnu=currentnu0+nu_cut;}
@@ -1363,10 +1436,6 @@ int main(int argc, char* argv[]){
                if(!past_it){
                   SpectrumWaves.push_back(tempnu); 
                   kountwaves++;}
- 
-                        int idebug=kountwaves;
-                        if(idebug==26395){
-                             cout << "debug point\n";}
            }  //got to next half way point or end of spectrum or lines so close
               //that half way point+stepnu is past nextnu0
            if(past_it){
@@ -1387,13 +1456,13 @@ int main(int argc, char* argv[]){
               SpectrumKays.push_back(myzero);
            //chop this next bit of loop out once all the above thoroughly tested
               if(l==0)
-              cout << "start of " << templength << " wave numbers--wave number=" << SpectrumWaves[l] << endl;
+           //   cout << "start of " << templength << " wave numbers--wave number=" << SpectrumWaves[l] << endl;
               if(SpectrumWaves[l+1] <= SpectrumWaves[l]){
                     cout << "Error at l=" << l << "  layer=" << nlay << "  Iso=" << k << endl;
                     exit(0);
               }
-              if(l==templength-1)
-              cout << "end of " << templength << " wave numbers--wave number=" << SpectrumWaves[l] << endl;
+           //   if(l==templength-1)
+           //   cout << "end of " << templength << " wave numbers--wave number=" << SpectrumWaves[l] << endl;
            }
            SpectrumKays.push_back(myzero);        
 
@@ -1428,9 +1497,10 @@ int main(int argc, char* argv[]){
               while(xtemp>currentnu0-width && iwave-leftwaves>0){
                    xtemp=SpectrumWaves[iwave-leftwaves];
                    // cout << setprecision(11) << xtemp << endl;
+                   if(xtemp>currentnu0-width){
                    Xvector.push_back(xtemp); 
                    ISpect.push_back(iwave-leftwaves);
-                   leftwaves++;
+                   leftwaves++;}
               } 
 
               rightwaves=1;
@@ -1441,41 +1511,53 @@ int main(int argc, char* argv[]){
               Xvector.push_back(xtemp); 
               ISpect.push_back(iwave+rightwaves);
               rightwaves++;
+
               while(xtemp<currentnu0+width && iwave+rightwaves<speclength){
                    xtemp=SpectrumWaves[iwave+rightwaves];
                   // cout << setprecision(11) << xtemp << endl;
+                   if(xtemp<currentnu0+width){
                    Xvector.push_back(xtemp); 
                    ISpect.push_back(iwave+rightwaves);
-                   rightwaves++;
+                   rightwaves++;}
               } 
               } //endif for going past spectrum limit
               // the rightwaves block looks like a 1 to N vector, not a 0 to N-1 so shave 1 off rightwaves
               rightwaves--;
               int Nwaves=leftwaves+rightwaves;
 
+              //remember the first entry in Xvector is the line centre
+
               double XVEC[Nwaves],KVEC[Nwaves];
               for(int j=leftwaves-1; j>=0; j--){
-                  XVEC[leftwaves-1-j]=(Xvector[j]-Xvector[leftwaves-1])*xfac;
+                  XVEC[leftwaves-1-j]=(Xvector[j]-Xvector[0])*xfac;
                   KVEC[leftwaves-1-j]=0.0;
               }
              for(int j=leftwaves; j< Nwaves; j++){
-                  XVEC[j]=(Xvector[j]-Xvector[leftwaves-1])*xfac;
+                  XVEC[j]=(Xvector[j]-Xvector[0])*xfac;
                   KVEC[j]=0.0;
               }
               //calculate voigt profile
               humlik_(Nwaves, XVEC, yfac, KVEC);
 
-              for(int j=leftwaves-1; j>=0; j--){
+              for(int j=0; j<leftwaves; j++){
                   SpectrumKays[ISpect[leftwaves-1-j]]=SpectrumKays[ISpect[leftwaves-1-j]]
-                                                     +KVEC[leftwaves]*knaughtlines[l];
-                  cout << setprecision(11) << XVEC[leftwaves-1-j] << " K= " << KVEC[leftwaves-1-j] << " I="
-                       << leftwaves-1-j << "  J=" << ISpect[leftwaves-1-j] << endl;
+                                                     +KVEC[j]*knaughtlines[l];
+             
+               /*     cout << setprecision(11) << XVEC[j] << " K= " << KVEC[j] << " Left-1-j  "
+                       << leftwaves-1-j << "  ISpect=" << ISpect[leftwaves-1-j] << "  "
+                       << Xvector[j] <<  "  " << Xvector[0]  << "  " << l << endl; */
+ 
               }
              for(int j=leftwaves; j< Nwaves; j++){
                    SpectrumKays[ISpect[j]]=SpectrumKays[ISpect[j]]+KVEC[j]*knaughtlines[l];
-                   cout << setprecision(11) << XVEC[j] << " K= " << KVEC[j] << " I= " 
-                        << j <<  "  J=" << ISpect[j]  <<endl;
+
+               /*   cout << setprecision(11) << XVEC[j] << " K= " << KVEC[j] << " j= " 
+                        << j <<  "  ISpect=" << ISpect[j]  << "  " 
+                        <<  Xvector[j] << "  " << Xvector[0] << "  " << l <<endl; */
+
               }
+              //cout << currentnu0 << "  " << wavenumlines[l] << "  " << leftwaves << "  " << rightwaves << endl;
+              //if(l==2)exit(0);
 
 
               Xvector.erase(Xvector.begin(), Xvector.end());
@@ -1486,13 +1568,15 @@ int main(int argc, char* argv[]){
 
 
           if(outspec){
+
 /*****************************************************************************************
         Output Spectra if needed
 ******************************************************************************************/
         // for each isotopologue output files to MolSpect directory
         // first --- the file names
         // current gas=ig  --- Yep we are still in the ig loop!
-
+        bool firstwrite=false;
+        if(nlay==0)firstwrite=true;
         string SpectFile;
         SpectFile=AllMols[ig];
         const string SpectDir("MolSpect");
@@ -1500,17 +1584,19 @@ int main(int argc, char* argv[]){
         cout << SpectFile << endl;
         ostringstream oss_outcode; //output file has isotopologue number and  layer number
         int isorep1, isorep2;
-        if(Iso<10){
-           isorep1=Iso+48; //ASCII 0=48
+
+        if(k+1<10){
+           isorep1=k+1+48; //ASCII 0=48
            oss_outcode <<  "_Iso_"  << (char)isorep1;
-          // cout << "Iso Number=" << Iso << "  character="<<  (char)isorep1 << endl;
+          // cout << "Iso Number=" << k+1 << "  character="<<  (char)isorep1 << endl;
         }
-        if(Iso>=10){
-           int i1=Iso-10,i2=Iso%10;
+
+        if(k+1>=10){
+           int i1=k+1-10,i2=(k+1)%10;
            isorep1=i1+48;
            isorep2=i2+48;
            oss_outcode <<  "_Iso_"  << (char)isorep1 << (char)isorep2;
-          // cout << "Iso Number=" << Iso << endl;
+          // cout << "Iso Number=" << k+1 << endl;
          }
 
          string modstring;
@@ -1520,7 +1606,88 @@ int main(int argc, char* argv[]){
          stringsize=SpectFile.size();
          ipos=stringsize-4; //".dat" at the end
          SpectFile.insert(ipos,modstring);
-         cout << SpectFile << endl;    
+         cout << SpectFile << "  " << nlay << "  "  << k << endl;  
+
+         if(firstwrite){
+           int Status=-1000;
+           struct stat FileInfo;
+           Status=stat(SpectFile.c_str(),&FileInfo);
+           //returns 0 if successfully get File Infor, -1 if it fails to find the file
+           if(Status==0){
+             cout << "File " << SpectFile << " already exists-We will not overwite it or append to it!\n";
+             exit(0);}
+          } //endif firstwrite
+
+         firstwrite=false;
+         int kountzero=0;
+         int isize=SpectrumWaves.size();
+
+         if(logplot){
+         //strip out the zeros!
+           for(int iz=0; iz < isize; iz++){
+              if(SpectrumKays[iz]<=0.0)kountzero++;
+         }}
+
+         // for PlotIt        
+         int ntype=0;   //points=1   lines=0
+         int ncol=1+nlay;    //Give each line a different material colour
+         int nstyle=0;  // solid or dippled
+         int npoint=1;  //point size
+
+
+         OutSpect.open(SpectFile.c_str(),ios::out | ios::app);
+
+         if(nlay==0)OutSpect << up_to_top << endl;
+
+          if(PlotIt){
+            OutSpect << isize-kountzero <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
+          } 
+          else{       
+            OutSpect << isize-kountzero << endl;
+          } 
+
+         if(logplot){
+
+            for(int i=0; i<isize; i++){
+              if(SpectrumKays[i]>0){
+                  OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << log10(SpectrumKays[i]) << endl;
+              }  //endif  >0
+             } //end for loop}
+         }
+         else{
+
+           for(int i=0; i<isize; i++){
+              OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << SpectrumKays[i] << endl;
+           }
+  
+         }  //end for if logplot else
+
+
+           if(nlay==up_to_top-1){
+
+            if(PlotIt){
+  
+              OutSpect << 1 << "  " <<  1 << endl;
+              OutSpect << "Wave@Number   @per_cm" << endl;
+              OutSpect << 1 << "  " <<  1 << endl;
+              if(logplot){
+                 OutSpect << "log10(Cross@Section)    @cm^2" << endl;}
+              else{
+                 OutSpect << "Cross@Section   @cm^2" << endl;
+              }
+                 OutSpect << "1" << endl;
+
+             for(int laynumber=0; laynumber< up_to_top; laynumber++){
+                OutSpect << "Layer=@" << laynumber << endl;
+             }
+           
+           } //endif for PlotIt}
+         
+
+           } //endif for nlay=up_to_top
+
+           OutSpect.close();    
+         
          } //endif for outspec
 
 
@@ -1528,18 +1695,15 @@ int main(int argc, char* argv[]){
 
 /*****************************************************************************************
         Work out k Distributions
-******************************************************************************************/
-
-
-
-
-           
+******************************************************************************************/           
 
                           
            SpectrumWaves.erase(SpectrumWaves.begin(), SpectrumWaves.end());
            CentreWaves.erase(CentreWaves.begin(), CentreWaves.end());
            CentreLines.erase(CentreLines.begin(), CentreLines.end());
            }  //end loop over layers nlay
+
+
           } // end loop over isotopologues k=0, k< nicemax
 
 
@@ -1560,14 +1724,11 @@ int main(int argc, char* argv[]){
                  lineShift[i].erase(linestrengths[i].begin(), linestrengths[i].end());            
             }
 
-      }
-      //end loop over HITRAN par files ig=0 to ngas
+      } //end loop over HITRAN par files ig=0 to ngas
 
          } //endif for calcspec
 
      //delete respval and lambdaresp - add later
-
-
 
   return 0;
 }

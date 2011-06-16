@@ -11,7 +11,8 @@ void Questioner(bool& verbose,
                int& itypes, int& itypet, int& itypeb, bool& ocean, bool& groundP, bool& groundT,
                int& ihumid, double& groundtemp, double& groundpress,
                bool& default_pause, double& HG, double& HB, double& HT, double& HS, double& HU, int& ngaussL,
-               bool& calcspec, bool& outspec, int& ngaussLs, int& icutL, int& icutD, int& istep,
+               bool& calcspec, bool& outspec, bool& PlotIt, bool& logplot, bool& calcRef, bool& outRef,
+               int& ngaussLs, int& icutL, int& icutD, int& istep,
                const char* ReadInput){
 
 vist=-1;vist=-1;lambda1=-1; lambda2=-1; nsplit1=-1;nsplit2=-1;nsplit3=-1;nsplit4=-1;
@@ -29,7 +30,7 @@ ihumid=-1; groundtemp=-1e6;groundpress=-1; default_pause=true;
    fp_in.open(ReadInput, ios::in);
    if(!fp_in.is_open()){ cerr << "Failed to open file (" << ReadInput << ")" << endl;  exit(1);}
       fp_in >> lambda1 >> lambda2 >> rfun;
-      fp_in >> calcspec >> outspec;
+      fp_in >> calcspec >> outspec >> PlotIt, logplot, calcRef, outRef;
       fp_in >> ngaussLs;
       fp_in >> icutL >> icutD >> istep;
       fp_in >> vis >>  vist  >> visb;
@@ -61,18 +62,32 @@ ihumid=-1; groundtemp=-1e6;groundpress=-1; default_pause=true;
   cin >> calcspec;
   cout << "Enter 1 if you want to output a fine detailed spectrum, enter 0 otherwise\n";
   cin >> outspec;
+  if(outspec){
+  cout <<" Enter 1 if you are using the Chris Godsalve's PlotIt program to look at the output - 0 otherwise\n";
+  cin >>PlotIt;
+  cout << "Enter 1 if you want to plot the log of the spectrum- 0 otherwise\n";
+  cin >> logplot;
+  }
+  else{
+    PlotIt=false; logplot=false;
+  }
+  cout << "Enter 1 if you want to calculate the refractive index via the Kramers-Kronig relations\n";
+  cout << "and 0 otherwise (calculating it is computationally expensive!)\n";
+  cin >> calcRef;
+  cout <<"Enter 1 if you want a to output the fine detailed refractive index spectrum\n";
+  cin >> outRef;
   cout << "Enter order of Gauss-Legendre quadrature rule for integration over distributions\n";
   cin >> ngaussLs;
   cout << "Enter (integer) number of linewidths for cut-off for a Lorentz profile\n";
   cin >> icutL;
   cout << "Enter (integer) number of linewidths for cut-off for a Doppler profile\n";
   cin >> icutD;
-  cout << "Enter istep (integer that sets the resolution for each line --- make it 10 or more)\n";
+  cout << "Enter istep (integer that sets the resolution for each line --- make it 5 or more)\n";
   cin >> istep;
 
 
   cout << "Enter 1 if you want to use visibility, 0 for optical depths instead\n";
- cin >> vis;
+  cin >> vis;
 
   if(vis){
   cout << "Enter a boundary layer visibility\n";
