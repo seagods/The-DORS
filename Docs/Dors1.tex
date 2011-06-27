@@ -357,19 +357,23 @@ So, we have finished our first run-through of {\it Dors1 -v} and this has create
 In the first line, we have $\lambda_1$, $\lambda_2$, and the bool which tells us whether
 we are using a response function file. If we are using a response function, the two wavelengths
 will be reset by the first and last wavelengths in the response function file, but two dummies are still required as input in
-{\it Dors1in.dat}. There are six values of siz bools on the next line. This tells us that we are to calculate new molecular absorption files and shall not use the results of any previous calculation, the next 1 tells us that we are writing out
+{\it Dors1in.dat}. There are six values of six bools on the next line. They are all set to one. The first 1 tells us that we are to calculate new molecular absorption files and shall not use the results of any previous calculation, the next 1 tells us that we are writing out
  the absorption coefficient spectrum for each gas in each layer. The next 1 tell us that we are using
 the $PlotIt$ program, the next 1 is that it is a  log plot, the next 1 says we are calculating the refractive index, 
  and the last 1 tells us we are writing out
-refractive index spectra. More usually that line would be "1 0 0 0 0 0". There must be six values on this line.
+refractive index spectra. More usually that line would be ``1 0 0 0 0 0". There must be six values on this line.
  
 The 10 on the next line tells us that we are using
 10 point Gauss quadrature for the integration over the cumulative-$\kappa$ distribution for calculating non-grey 
-radiative transfer. The next line ends the wavelength related inputs, and are related to the sum of the
-Lorentz and Doppler half widths at half maximum or ten times what we shall call the ``total half width"
+radiative transfer. 
+
+The next line ends the wavelength related inputs, and are related cutoffs in terms of the
+Lorentz and Doppler half widths at half maximum. 
 The line tells is we have a Doppler cut-off of 5 times the Doppler half width, a pressure broadening 
 cut-off of 12 times and Lorentz half width. The program select the largest of these two cut-offs,
- and the step size shall be the cut-off divided by 10.
+ and the step size shall be the whichever of the two half widths is the largest divided by 10.
+For example, if the Doppler cutoff is 5$\times$ 0.2 and the Lorentz cutoff is 12*0.4. Then the program
+ shall chose the  cutoff to  4.8. The step size chall be 0.4/10.
 
  The next line has three numbers. The 1 tells us we have chosen to
  use visibilities,  and have chosen a tropospheric visibility of 40km and a boundary layer visibility

@@ -15,7 +15,7 @@
 // IN NO EVENT SHALL CHRISTOPHER GODSALVE BE LIABLE TO ANY PARTY FOR
 // DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING 
 // LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, 
-// EVEN IF CHRITOPHER GODSALVE HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+// EVEN IF CHRISTOPHER GODSALVE HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 //
 // CHRISTOPHER GODSALVE SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -35,27 +35,48 @@
 #include <sys/stat.h>
 using namespace std;
 
-// slatec fortran cubic spline routines
+// fortran programs, use nm (name mangle) on object files and .so files
+// to get calling name. Usually the same name with all lower case letters
+// and a trailing underscore at the end. Also, fortran always passes data to
+// functions and subroutines by address, and square arrays A_ij in fortran are A_ji in C.
+
 extern "C" {
 
+// slatec fortran B-spline routines, k=4 is cubic
+// dbint4 calculates the spline representation
+// SUBROUTINE DBINT4 (X, Y, NDATA, IBCL, IBCR, FBCL, FBCR, KNTOPT, T, BCOEF, N, K, W)
 void dbint4_(double*, double*, int*, int*, int*,  double*, double*,
               int*, double*, double*, int*, int*, double*);
-             
-double dbvalu_(double*, double*, int* ,int*,int* ,double*, int*, double*);
 
-//toms library Gauss quadrature
+// dbvalu evalutes the spline or a derivative of the function
+// dbspev similarr, but calculates a vector of derivatives
+// DOUBLE PRECISION FUNCTION DBVALU (T, A, N, K, IDERIV, X, INBV, WORK)
+double dbvalu_(double*, double*, int* ,int*, int* ,double*, int*, double*);
+
+// dbsqad integrates the function from spline
+// SUBROUTINE DBSQAD (T, BCOEF, N, K, X1, X2, BQUAD, WORK)
+void dbsqad_(double*, double*, int*, int*, double*, double*, double*, double*);
+
+// dbintk  -- order k spline
+// SUBROUTINE DBINTK (X, Y, T, N, K, BCOEF, Q, WORK)
+void dbintk_(double*, double*, double*, int*, int*, double*, double*, double*);
+
+// toms library Gauss quadrature
+// SUBROUTINE WEIGHTCOEFF(N,Q,E,EPS,W,X,WORK)
 void weightcoeff_(int*, double*, double*, double*, double*,
                        double*, double*);
 
-//HITRAN Partition Function  --- note calling from c++ means all lower case
+//HITRAN Partition Function
 void bd_tips_2003_(int&, double&, int&, double&, double&);
 
+//calculates Voigt profile.
 void humlik_(int&, double*, double&, double*);
 }
 
+// Either prompts user for input values, or reads an input file.
 void Questioner( bool&,
                 int&, int&, int&, int&, bool&, double&,
-                double&, double&, double&, bool&,  int&, bool&, bool&, int&,
+                double&, double&, double&, double&, bool&,  int&, bool&, bool&, int&,
                 int&, int&, int&, bool&, bool&, bool&, 
                 int&, double&, double&,
                 bool&, double&, double&, double&, double&, double&, int&, 
@@ -63,6 +84,8 @@ void Questioner( bool&,
                 int&, int&, int&, int&,
                 const char*);
 
+// Either calculates humidity from number density or number density from humidity.
+// The values can be over liquid water or ice.
 void WaterVap(double* , double* , double* ,
               double* , double &, double &, double &, int &, int &, int &);
 
@@ -93,7 +116,9 @@ int main(int argc, char* argv[]){
    Stage 3:  Do the integrations w.r.t. height for masses, number densities, average
              temperature pressure and pressure for all the nsplit1+nsplit4+nsplit3+nsplit4 sub-slabs.
 ****************************************************************************************
-   Stage 4:  Loop over Hitran par files, read in line centres, calculate the spectrum
+   Stage 4:  4A: Loop over Hitran par files, read in line centres.
+             4B: Work out where to calculate the spectrum.
+             4C: calculate the spectrum.
 ****************************************************************************************/
 
 
@@ -102,7 +127,7 @@ int main(int argc, char* argv[]){
   // Four layers are boundary layer, troposphere, stratosphere, and upper atmosphere
   int nsplit1,nsplit2,nsplit3,nsplit4;    
   // boundary layer visibility , troposphere visiblility, wavelength1, wavelength2
-  double visb, vist, lambda1, lambda2;
+  double visb, vist, lambda1, lambda2, lambdacut;
   bool rfun=true;  //true if we are using myresp.ddat or myrespX.dat as a response function file
   bool vis;  //true if entered as visibility, false if entered as optical depth.
   // default atmosphere 1-6 or user defined
@@ -186,7 +211,7 @@ int main(int argc, char* argv[]){
 
    Questioner(verbose,
               nsplit1, nsplit2, nsplit3, nsplit4, vis, visb,
-              vist, lambda1, lambda2, rfun,  iatm, switchR, switchA, itypeu,
+              vist, lambda1, lambda2, lambdacut, rfun,  iatm, switchR, switchA, itypeu,
               itypes, itypet, itypeb, ocean, groundP, groundT,
               ihumid, groundtemp, groundpress,
               default_pause, HG, HB, HT, HS, HU, ngauss_height, 
@@ -815,7 +840,7 @@ int main(int argc, char* argv[]){
         for( int n=0; n< ngas; n++){
            for( int i=0;i<iheight;i++){
                // divide ENN by 1E6 since Gas[i][n] is ppmv
-               // divide by a 1000 and DensGas is in Kg m^{-2} (remember necleon is in grammes.
+               // divide by a 1000 and DensGas is in Kg m^{-2} (remember nucleon is in grammes.
                DensGas[i][n]=ENN[i]/1.0E6*Gas[i][n]*MWGAS[n]*nucleon/1000.0;
            }
          }
@@ -1010,6 +1035,11 @@ int main(int argc, char* argv[]){
                          BEGIN STAGE 4
                          HITRAN DATA 
 ****************************************************************************************/
+
+/******************************* BEGIN STAGE 4A     ************************************/
+/********************  FOR EACH GAS -- FOR EACH ISO -- FOR EACH LAYER  *****************/
+
+
       if(calcspec){    //there are reasons we might not want to bother!
 //    declarations for HITRAN input
       cout <<" Now read HITRAN par files\n";    
@@ -1032,11 +1062,15 @@ int main(int argc, char* argv[]){
       //look at wavenumbers nu1-cutoff to nu2+cutoff;
       double nu1, nu2, nu1X, nu2X, lambda1X, lambda2X;
       nu1=1e4/lambda2; nu2=1e4/lambda1;
-      nu1X=nu1-nu_cut; nu2X=nu2+nu_cut;
+      nu_cut=lambdacut/lambda1*nu1;
+      nu1X=nu1-nu_cut;
+      nu_cut=lambdacut/lambda2*nu2;
+      nu2X=nu2+nu_cut;
       lambda1X=1.0e4/nu2X; lambda2X=1.0e4/nu1X;
      
       cout << "nu1X nu2X " << nu1X << "  " << nu2X  <<endl;
       cout << "lambda1X  lambda2X  " << lambda1X << "  " << lambda2X << endl;
+
       bool singlewave=false;
 
       if(lambda2<lambda1){
@@ -1058,7 +1092,7 @@ int main(int argc, char* argv[]){
       string entry[19];
       istringstream iss[19]; //19 input stringstreams
       
-
+      //FOR EACH GAS
       for(int ig=0; ig<ngas; ig++){ //loop to read from HITRAN files.
         
         int molecule=gases[ig];
@@ -1236,9 +1270,12 @@ int main(int argc, char* argv[]){
 
         cout << "Finished with PARFILE=" << PARFILE << endl;
         
+/*******************************END STAGE 4A *****************************************/
 
-
-
+/*******************************BEGIN STAGE 4B ***************************************/
+/************************ 4B BEGINS INSIDE LOOP INSIDE  LOOP ****************************/
+/********************     FOR EACH ISO -- FOR EACH LAYER            *****************/
+        //FOR EACH ISO
        for(int k=0; k<vecsize; k++){   //loop over isotopologues
 
         int ig_fort=ig+1;  //gas and isotopoluge for BD_TIPS_2003.f
@@ -1258,6 +1295,7 @@ int main(int argc, char* argv[]){
 
         bd_tips_2003_(ig_fort, RefTemp, k_fort, Refgee_i, QT);
         ofstream OutSpect;
+        //FOR EACH LAYER
         for(int nlay=0; nlay < up_to_top; nlay++){
             TempNlay=AvTemp[nlay];
             PressNlay=AvPress[nlay];
@@ -1297,7 +1335,7 @@ int main(int argc, char* argv[]){
               //now we have the x and y vectors for all the lines
             }  //end loop over nlines
 
-
+/*******************************BEGIN STAGE 4B PROPER - WORK OUT SPECTRUMWAVES **********************/
             vector<double> SpectrumWaves; vector<double>SpectrumKays;
             vector<int> CentreWaves;  //which values of nu in SpectrumWaves are at line centres?
             vector<int> CentreLines;
@@ -1306,6 +1344,9 @@ int main(int argc, char* argv[]){
             CentreLines.clear();
             double startnu,stepnu,tempnu,currentnu0,
             currentwidth,currentwidthL,currentwidthD,nextnu0,last_stopnu, stopnu, Wtol;
+
+            vector<double>SpectrumDeltaN;
+            SpectrumDeltaN.clear();
 
 
             Wtol=0.000001;  //because of fortran F12.6  for wave number in par file
@@ -1436,24 +1477,25 @@ int main(int argc, char* argv[]){
                if(!past_it){
                   SpectrumWaves.push_back(tempnu); 
                   kountwaves++;}
-           }  //got to next half way point or end of spectrum or lines so close
-              //that half way point+stepnu is past nextnu0
-           if(past_it){
+               }  //got to next half way point or end of spectrum or lines so close
+                  //that half way point+stepnu is past nextnu0
+               if(past_it){
                   tempnu=tempnu-stepnu;
                   past_it=false;
                   SpectrumWaves.push_back(stopnu); 
                   kountwaves++;
-           }
-           last_stopnu=tempnu;
-           icurrent++;
+               }
+               last_stopnu=tempnu;
+               icurrent++;
               } //end of if else for skipline
-           }  //end of while icurrent < nlines
+           } //end of while icurrent << nlines
 
 
            int templength=SpectrumWaves.size();
            double myzero=0.0;
            for(int l=0; l<templength-1; l++){
               SpectrumKays.push_back(myzero);
+              SpectrumDeltaN.push_back(myzero);
            //chop this next bit of loop out once all the above thoroughly tested
               if(l==0)
            //   cout << "start of " << templength << " wave numbers--wave number=" << SpectrumWaves[l] << endl;
@@ -1464,15 +1506,18 @@ int main(int argc, char* argv[]){
            //   if(l==templength-1)
            //   cout << "end of " << templength << " wave numbers--wave number=" << SpectrumWaves[l] << endl;
            }
-           SpectrumKays.push_back(myzero);        
+           SpectrumKays.push_back(myzero); 
+           SpectrumDeltaN.push_back(myzero);          
 
            double xfac, yfac, xtemp, width, alphaD, alphaL;
            int leftwaves, rightwaves, iwave, SpectrumSize;
            int nulength=CentreWaves.size();
            int speclength=SpectrumWaves.size();
+/*******************************END STAGE 4B  -- WE HAVE SPECTRUMWAVES ***************/
+/*******************************BEGIN STAGE 4C  KAYWAVES *****************************/
            
            for(int l=0; l<nulength-1; l++){
-              currentnu0=wavenumlines[l]-lineShift[k][icurrent]*AvPress[nlay]/RefPress;
+              currentnu0=wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress;
               width=widthlines[l];   //cutoff from previous loop
               alphaD=alphaDop[l];
               alphaL=alphaLorentzA[l];
@@ -1481,8 +1526,8 @@ int main(int argc, char* argv[]){
               //Need to calculate Xvector for HUMLIK
               //But it needs to be ordered. We will have a normal array (ordered)
               // and a C++ vector (disordered)
-              vector <double> Xvector;
-              vector <int>  ISpect;
+              vector<double> Xvector;
+              vector<int>  ISpect;
               Xvector.clear();
               ISpect.clear();
               leftwaves=0; rightwaves=0; iwave=CentreWaves[l];
@@ -1543,28 +1588,389 @@ int main(int argc, char* argv[]){
                   SpectrumKays[ISpect[leftwaves-1-j]]=SpectrumKays[ISpect[leftwaves-1-j]]
                                                      +KVEC[j]*knaughtlines[l];
              
-               /*     cout << setprecision(11) << XVEC[j] << " K= " << KVEC[j] << " Left-1-j  "
+            /*      cout << setprecision(11) << XVEC[j] << " K= " << KVEC[j] << " Left-1-j  "
                        << leftwaves-1-j << "  ISpect=" << ISpect[leftwaves-1-j] << "  "
                        << Xvector[j] <<  "  " << Xvector[0]  << "  " << l << endl; */
  
               }
+
              for(int j=leftwaves; j< Nwaves; j++){
                    SpectrumKays[ISpect[j]]=SpectrumKays[ISpect[j]]+KVEC[j]*knaughtlines[l];
+              } 
 
-               /*   cout << setprecision(11) << XVEC[j] << " K= " << KVEC[j] << " j= " 
-                        << j <<  "  ISpect=" << ISpect[j]  << "  " 
-                        <<  Xvector[j] << "  " << Xvector[0] << "  " << l <<endl; */
-
-              }
               //cout << currentnu0 << "  " << wavenumlines[l] << "  " << leftwaves << "  " << rightwaves << endl;
-              //if(l==2)exit(0);
+
+             if(calcRef && ig==0 && k==0){  //calc only for first Iso of Water vapour
+
+
+                 //we calculate  this alpha for 1g water --- need to correct
+                           
+                 double convert_to_percm, eps;
+                 convert_to_percm=1.0/massgases[nlay][0]/SlabThick[up_to_top-nlay]/100.; //slab thickness in metres
+                 //don't forget the 1/2 pi^2 outside the KK integral!
+                 convert_to_percm=convert_to_percm/2.0/pi/pi;
+
+
+                  
+                  // We use Kramers Kronig Relation
+                  // alpha=absorption coeff (per cm) per gram.
+                  // KAY is line strength per Molecule
+                  // Need to multiply K by the number of water molecules in one gramme of water 
+
+ 
+                  //  the problem is that we have a variable step, and that the function 
+                  //  evaluation x values just wont be a mirror image around x=0. Interpolate!
+
+
+                  double OMEGA;
+                  int rightwaves=Nwaves-leftwaves+1;  //include centre wavelength at leftwaves-1
+
+                  double XLEFT[leftwaves]; double XRIGHT[rightwaves];
+
+                  double ALPHA_LEFT[leftwaves];   //first contains alpha(-omega^prime)
+                  double ALPHA_RIGHT[rightwaves];   //second contains alpha(omega^prime)
+
+                  double ALPHA_LEFT_spare[leftwaves];   //spare copy alpha(-omega^prime)
+                  double ALPHA_RIGHT_spare[rightwaves];   //spare copy alpha(omega^prime)
+
+                  double ALPHA_DERIV_LEFT[leftwaves]; double ALPHA_DERIV_RIGHT[rightwaves];
+                  double DeltaNleft[leftwaves];    double DeltaNright[rightwaves]; // weak susceptibility limit
+
+                  double DeltaN1=0; double DeltaN2=0;
+
+
+                  for(int kk=0; kk<leftwaves; kk++){
+                      XLEFT[kk]=-XVEC[leftwaves-1-kk];
+                      ALPHA_LEFT[kk]=KVEC[leftwaves-1-kk]*knaughtlines[l]/(AllMolW[ig][k]*nucleon); // 1 g H2O -chane down the line
+                      ALPHA_LEFT_spare[kk]=ALPHA_LEFT[kk];
+                    //  cout << kk << "   x left=" << XLEFT[kk] << "   alpha=" << ALPHA_LEFT[kk] << endl;
+                  }
+
+
+                  for(int kk=1; kk<rightwaves; kk++){
+                      XRIGHT[kk]=XVEC[leftwaves-1+kk];
+                      ALPHA_RIGHT[kk]=KVEC[leftwaves-1+kk]*knaughtlines[l]/(AllMolW[ig][k]*nucleon); //1 g H2O -chane down the line
+                      ALPHA_RIGHT_spare[kk]=ALPHA_RIGHT[kk];
+                   //   cout << kk << "  x right=" << XRIGHT[kk] << "   alpha=" << ALPHA_RIGHT[kk] << endl;
+                  }
+                  //tidy the origin if needed (can be - extremely small garbage instead of zero
+                  XLEFT[0]=0.0; XRIGHT[0]=0.0;
+
+
+                      //B-Spline over alpha -- want d alpha / d omega --set first derivatve zero at x=0;.
+                       KORDER=4; // order of spline
+                       KNOPT=1;  //option for no extrapolation outside data
+                       IBCL=1; IBCR=2;       //alpha has max at origin. natural spline
+                       FBCL=0.0; FBCR=0.0;  // derivatives must be zero --- natural spline on far left
+                       IN=leftwaves+2;
+    
+                       double TEE_ALPHA_LEFT[leftwaves+6];
+                       double BCOEF_ALPHA_LEFT[IN];
+                       double WORK_ALPHA_LEFT[5*(leftwaves+2)]; double WORK2_ALPHA_LEFT[3*KORDER];
+                       dbint4_(XLEFT,ALPHA_LEFT,&leftwaves,&IBCL,&IBCR,&FBCL,&FBCR,
+                               &KNOPT, TEE_ALPHA_LEFT, BCOEF_ALPHA_LEFT,&IN, &KORDER, WORK_ALPHA_LEFT);
+
+                       ideriv=1; inbv=1; //inbv must always be set to 1 on first call to dbvalu
+                       IN=leftwaves+2;
+                       for(int kk=0; kk < leftwaves;kk++){
+                                  ALPHA_DERIV_LEFT[kk]=dbvalu_(TEE_ALPHA_LEFT,BCOEF_ALPHA_LEFT,&IN,&KORDER
+                                 ,&ideriv, XLEFT+kk, &inbv, WORK2_ALPHA_LEFT); 
+                        }
+
+                       KORDER=4; // order of spline
+                       KNOPT=1;  //option for no extrapolation outside data
+                       IBCL=1; IBCR=2;       //alpha has max at origin. natural spline
+                       FBCL=0.0; FBCR=0.0;  // derivatives must be zero --- natural spline on far left
+                       IN=rightwaves+2;
+
+                       //estimate ALPHA_DERIV from splines;
+                       //
+    
+                       double TEE_ALPHA_RIGHT[rightwaves+6];
+                       double BCOEF_ALPHA_RIGHT[IN];
+                       double WORK_ALPHA_RIGHT[5*(rightwaves+2)]; double WORK2_ALPHA_RIGHT[3*KORDER];
+                       dbint4_(XRIGHT,ALPHA_RIGHT,&rightwaves,&IBCL,&IBCR,&FBCL,&FBCR,
+                               &KNOPT, TEE_ALPHA_RIGHT, BCOEF_ALPHA_RIGHT,&IN, &KORDER, WORK_ALPHA_RIGHT);
+
+
+                       IN=rightwaves+2;
+                       ideriv=1; inbv=1; //inbv must always be set to 1 on first call to dbvalu
+                       for(int kk=0; kk < rightwaves;kk++){
+                                  ALPHA_DERIV_RIGHT[kk]=dbvalu_(TEE_ALPHA_RIGHT,BCOEF_ALPHA_RIGHT,&IN,&KORDER
+                                 ,&ideriv, XRIGHT+kk, &inbv, WORK2_ALPHA_RIGHT); 
+                        }
+
+                        for(int n_omega=0; n_omega<leftwaves; n_omega++){  //LOOP OVER OMEGA (left)
+
+                            OMEGA=XLEFT[n_omega];
+ 
+                            // We do the integral for each OMEGA via interpolation of the integrand
+                            // We have to split XLEFT and ALPHA into two parts for each integral
+                            // We have to make the limits the same on either side of the singularity
+
+
+
+                            for(int kk=0; kk< leftwaves; kk++){
+                                 if(kk ==n_omega){
+                                      ALPHA_LEFT[kk]=0.0;   //mark the divide with a zero value
+                                 }
+                                 else{
+                                      ALPHA_LEFT[kk]=ALPHA_LEFT_spare[kk]/(XLEFT[kk]*XLEFT[kk]-OMEGA*OMEGA);
+                               //       cout << kk << "  " << n_omega << "  "<<XLEFT[kk] << "   " <<  ALPHA_LEFT[kk] << endl;
+                                 }  
+                            } // end loop over omegaprime
+
+                            // now we can do the integral via interpolation
+                            // can only do Cauchy Principal value for n_omega=2 to n_omega=leftwaves-1
+
+                            // dbsqad needs at least four points if K=4 and using dbint4
+                            // smaller number of points --- use lower K and dbintk instead
+
+                            if(n_omega>1 & n_omega<leftwaves-2){
+
+
+                            bool use_dbint4Left=false, use_dbintkLeft=false
+                               , use_dbint4Right=false, use_dbintkRight=false;
+
+                            int korder1, korder2;
+
+                            // first we do the split 
+                            int n_omega1=n_omega;  int n_omega2=leftwaves-(n_omega+1);
+                            double XTEMP1[n_omega1];  double XTEMP2[n_omega2];
+                            double ALPHA_TEMP1[n_omega1];  double ALPHA_TEMP2[n_omega2];
+
+                           if(n_omega1==2){
+                                use_dbintkLeft=true; korder1=2;}
+
+                           if(n_omega1==3){
+                                use_dbintkLeft=true; korder1=3;}
+
+                           if(n_omega1==4){
+                                use_dbintkLeft=true; korder1=4;}
+
+                           if(!use_dbintkLeft){
+                               use_dbint4Left=true; korder1=4;}
+                           else {
+                               use_dbint4Left=false;}
+
+                           if(n_omega2==2){
+                                use_dbintkRight=true; korder2=2;}
+
+                           if(n_omega2==3){
+                                use_dbintkRight=true; korder2=3;}
+
+                           if(n_omega2==4){
+                                use_dbintkRight=true; korder2=4;}
+
+
+                           if(!use_dbintkRight){
+                               use_dbint4Right=true, korder1=4;}
+                           else{
+                               use_dbint4Right=false;}
+
+                          if(n_omega1 > 4){ use_dbint4Left=true; use_dbintkLeft=false; korder1=4;}
+                          if(n_omega2 > 4){ use_dbint4Right=true; use_dbintkRight=false; korder2=4;}
+  
+
+                            for(int kk=0; kk< leftwaves; kk++){
+
+                                   if(kk<n_omega){
+                                     XTEMP1[kk]=XLEFT[kk];
+                                     ALPHA_TEMP1[kk]=ALPHA_LEFT[kk];
+                            //         cout << " kk and n_omega1 " << kk << "  " << n_omega1 << endl;
+                                       cout <<  kk <<  XTEMP1[kk] << "  " << ALPHA_TEMP1[kk] << endl;
+                                   }
+                                    if(kk>n_omega){
+                                     XTEMP2[kk-n_omega-1]=XLEFT[kk];
+                                     ALPHA_TEMP2[kk-n_omega-1]=ALPHA_LEFT[kk];
+                            //        cout << " kk-n_omega-1 and n_omega2 " << kk-n_omega-1 << "  " << n_omega2 << endl;
+                                       cout << kk-n_omega-1 << XTEMP2[kk-n_omega-1] << "  " << ALPHA_TEMP2[kk-n_omega-1] << endl;
+                                     }
+                           } //end loop over kk
+                           double xrange1L=XTEMP1[0];   double xrange1R=XTEMP1[n_omega1-1];
+                           double xrange2L=XTEMP2[0];   double xrange2R=XTEMP2[n_omega2-1];
+
+
+                           //calculate limits
+                           double eps1, eps2;
+
+
+                           eps1=XLEFT[n_omega]-XLEFT[n_omega-1];     eps2=XLEFT[n_omega+1]-XLEFT[n_omega];
+                           if(eps1>=eps2)eps=eps1;  if(eps2>=eps1)eps=eps2;
+
+                           
+
+                           double lim1, lim2, lim3, lim4;
+                           bool inrange=false, inrange1=false, inrange2=false;
+
+                           //mostly these will be the limits - but we have a variable stepsize!
+                           lim1=XTEMP1[0]; lim2=XTEMP1[n_omega1-1];
+                           lim3=XTEMP2[0]; lim4=XTEMP2[n_omega2-1];
+                        
+                           //mostly inrange will be true, but at the very ends, a stepsize change 
+                           //might make inrange false
+                           if(fabs(eps1-eps2) >1e-10){
+                              lim2=XLEFT[n_omega]-eps;            
+                              lim3=XLEFT[n_omega]+eps;
+                              if(lim2<=xrange1R && lim2>=xrange1L)inrange1=true;
+                              if(lim3<=xrange2R && lim2>=xrange2L)inrange2=true;
+                              if(inrange1 && inrange2)inrange=true;
+                           }
+                           else{
+                              inrange=true;
+                           }
+                  
+                           if(inrange){
+
+
+                           DeltaN1=0; DeltaN2=0;
+
+                           if(use_dbint4Left){
+                           KORDER=4; // order of spline
+                           KNOPT=1;  //option for no extrapolation outside data
+                           IBCL=2; IBCR=2;       //natural spline
+                           FBCL=0.0; FBCR=0.0;  //first derivative must be zero natural spline
+                           IN=n_omega1+2;
+
+
+                           double TEE_ALPHA_TEMP1[n_omega1+6]; double BCOEF_ALPHA_TEMP1[IN];
+                           double WORK_ALPHA_TEMP1[5*(n_omega1+2)]; double WORK2_ALPHA_TEMP1[3*KORDER];
+        
+                           dbint4_(XTEMP1,ALPHA_TEMP1,&n_omega1,&IBCL,&IBCR,&FBCL,&FBCR,
+                               &KNOPT, TEE_ALPHA_TEMP1, BCOEF_ALPHA_TEMP1,&IN, &KORDER, WORK_ALPHA_TEMP1);
+
+                           dbsqad_(TEE_ALPHA_TEMP1, BCOEF_ALPHA_TEMP1, 
+                           &n_omega1, &KORDER, &lim1, &lim2, &DeltaN1, WORK2_ALPHA_TEMP1);
+
+
+                           } //endif use dbint4Left
+
+                          
+
+                           if(use_dbintkLeft){
+
+                           IN=n_omega1+2;
+                           int ktemp=korder1-1; // order of spline linear=2, quad=3, cube=4 
+                           double TEE_ALPHA_TEMP1[n_omega1+2*ktemp]; double BCOEF_ALPHA_TEMP1[IN];
+                           double WORK_ALPHA_TEMP1[(2*ktemp-1)*(n_omega1+2)]; double WORK2_ALPHA_TEMP1[3*korder1];
+            
+                           // odd -no BCs, and we have to supply TEE! (do as in dbint4 with knopt=1)
+                           // note - a lot of the comments in dbint4 and dbintk are wrong!
+                           for(int ll=0; ll < ktemp; ll++){
+                                  TEE_ALPHA_TEMP1[ll]=XTEMP1[0];
+                           }
+                           for(int ll=0; ll < ktemp; ll++){
+                                  TEE_ALPHA_TEMP1[n_omega1+ll]=XTEMP1[n_omega-1];
+                           }
+                           for(int ll=0; ll< n_omega1; ll++){
+                                  TEE_ALPHA_TEMP1[ktemp+ll]=XTEMP1[ll];
+                           }
+
+                           dbintk_(XTEMP1,ALPHA_TEMP1,TEE_ALPHA_TEMP1,
+                                   &n_omega1, &korder1, BCOEF_ALPHA_TEMP1, WORK_ALPHA_TEMP1, WORK2_ALPHA_TEMP1);
+
+                           dbsqad_(TEE_ALPHA_TEMP1, BCOEF_ALPHA_TEMP1, 
+                           &n_omega1, &KORDER, &lim1, &lim2, &DeltaN1, WORK2_ALPHA_TEMP1);
+
+
+
+
+                           } //endif use dbintkLeft
+
+
+
+                           if(use_dbint4Right){
+
+                           KORDER=4; // order of spline cubic=4 for dbint4
+                           KNOPT=1;  //option for no extrapolation outside data
+                           IBCL=2; IBCR=2;       //natural spline
+                           FBCL=0.0; FBCR=0.0;  //first derivative must be zero natural spline
+                           IN=n_omega2+2;
+
+                           double TEE_ALPHA_TEMP2[n_omega2+6]; double BCOEF_ALPHA_TEMP2[IN];
+                           double WORK_ALPHA_TEMP2[5*(n_omega2+2)]; double WORK2_ALPHA_TEMP2[3*KORDER];
+        
+                           dbint4_(XTEMP2,ALPHA_TEMP2,&n_omega2,&IBCL,&IBCR,&FBCL,&FBCR,
+                               &KNOPT, TEE_ALPHA_TEMP2, BCOEF_ALPHA_TEMP2,&IN, &KORDER, WORK2_ALPHA_TEMP2);
+
+
+                           dbsqad_(TEE_ALPHA_TEMP2, BCOEF_ALPHA_TEMP2,
+                           &n_omega2, &KORDER, &lim3, &lim4, &DeltaN2, WORK2_ALPHA_TEMP2);
+
+
+                           } //endif use dbint4Right
+
+                          
+
+                           if(use_dbintkRight){
+
+                           IN=n_omega2+2;
+                           int ktemp=korder2-1; // order of spline
+                           double TEE_ALPHA_TEMP2[n_omega2+2*ktemp]; double BCOEF_ALPHA_TEMP2[IN];
+                           double WORK_ALPHA_TEMP2[(2*ktemp-1)*(n_omega1+2)]; double WORK2_ALPHA_TEMP2[3*korder2];
+                           // odd -no BCs, and we have to supply TEE! (do as in dbint4 with knopt=1)
+                           // note - a lot of the comments in dbint4 and dbintk are wrong!
+                           for(int ll=0; ll < ktemp; ll++){
+                                  TEE_ALPHA_TEMP2[ll]=XTEMP2[0];
+                           }
+                           for(int ll=0; ll < ktemp; ll++){
+                                  TEE_ALPHA_TEMP2[n_omega2+ll]=XTEMP2[n_omega-1];
+                           }
+                           for(int ll=0; ll< n_omega2; ll++){
+                                  TEE_ALPHA_TEMP2[ktemp+ll]=XTEMP2[ll]; 
+                           }
+
+                           dbintk_(XTEMP2,ALPHA_TEMP2,TEE_ALPHA_TEMP2,
+                                   & n_omega2, &korder2, BCOEF_ALPHA_TEMP2, WORK_ALPHA_TEMP2, WORK2_ALPHA_TEMP2);
+
+
+                           dbsqad_(TEE_ALPHA_TEMP2, BCOEF_ALPHA_TEMP2,
+                           &n_omega2, &KORDER, &lim3, &lim4, &DeltaN2, WORK2_ALPHA_TEMP2);
+
+
+
+                           } //endif use dbintkRight
+
+
+                           DeltaNleft[n_omega]=DeltaN1+DeltaN2
+                                              +eps/XLEFT[n_omega]*ALPHA_DERIV_LEFT[n_omega];
+                           DeltaNleft[n_omega]=DeltaNleft[n_omega]*convert_to_percm;
+
+                           } //endif inrange
+
+                        }  //endif(n_omega>0 n_omega<leftwaves-2
+                        DeltaNleft[0]=0.0; 
+                        DeltaNleft[1]=convert_to_percm*eps/XLEFT[n_omega]*ALPHA_DERIV_LEFT[n_omega]; 
+                        DeltaNleft[leftwaves-2]=convert_to_percm*eps/XLEFT[n_omega]*ALPHA_DERIV_LEFT[n_omega]; 
+                        DeltaNleft[leftwaves-1]=0.0; 
+
+                   //     cout << XLEFT[n_omega] << "  " << DeltaNleft[n_omega] << endl;
+                           
+                
+                        }  //end loop over OMEGA (left)
+              exit(0);
+
+
+
+                      
+              for(int j=0; j<leftwaves; j++){
+                   SpectrumDeltaN[ISpect[leftwaves-1-j]]=SpectrumDeltaN[ISpect[leftwaves-1-j]]
+                                                        +DeltaNleft[leftwaves-1-j];
+              }
+
+             for(int j=leftwaves; j< Nwaves; j++){
+                   SpectrumDeltaN[ISpect[j]]=SpectrumDeltaN[ISpect[j]]+DeltaNright[j-leftwaves+1];
+              } 
+
+              cout << l << "   " << nlines << endl;
+              }// endif calcRef
+
 
 
               Xvector.erase(Xvector.begin(), Xvector.end());
               ISpect.erase(ISpect.begin(), ISpect.end());                     
-           }  //end for loop over centre wavelengths
+           }  //end for loop l<nulength over centre wavelengths
  
-
 
 
           if(outspec){
@@ -1602,6 +2008,7 @@ int main(int argc, char* argv[]){
          string modstring;
          modstring=oss_outcode.str();
          cout << modstring << endl;
+
          int stringsize,ipos;
          stringsize=SpectFile.size();
          ipos=stringsize-4; //".dat" at the end
@@ -1690,15 +2097,138 @@ int main(int argc, char* argv[]){
          
          } //endif for outspec
 
+          if(outRef){
+
+/*****************************************************************************************
+        Output Spectra if needed
+******************************************************************************************/
+        // for each isotopologue output files to MolSpect directory
+        // first --- the file names
+        // current gas=ig  --- Yep we are still in the ig loop!
+        bool firstwrite=false;
+        if(nlay==0)firstwrite=true;
+        string SpectFile;
+        SpectFile=AllMols[ig];
+        const string SpectDir("RefSpect");
+        SpectFile.replace(0, 11, SpectDir);
+        cout << SpectFile << endl;
+        ostringstream oss_outcode; //output file has isotopologue number and  layer number
+        int isorep1, isorep2;
+
+        if(k+1<10){
+           isorep1=k+1+48; //ASCII 0=48
+           oss_outcode <<  "_Iso_"  << (char)isorep1;
+          // cout << "Iso Number=" << k+1 << "  character="<<  (char)isorep1 << endl;
+        }
+
+        if(k+1>=10){
+           int i1=k+1-10,i2=(k+1)%10;
+           isorep1=i1+48;
+           isorep2=i2+48;
+           oss_outcode <<  "_Iso_"  << (char)isorep1 << (char)isorep2;
+          // cout << "Iso Number=" << k+1 << endl;
+         }
+
+         string modstring;
+         modstring=oss_outcode.str();
+         cout << modstring << endl;
+         int stringsize,ipos;
+         stringsize=SpectFile.size();
+         ipos=stringsize-4; //".dat" at the end
+         SpectFile.insert(ipos,modstring);
+         cout << SpectFile << "  " << nlay << "  "  << k << endl;  
+
+         if(firstwrite){
+           int Status=-1000;
+           struct stat FileInfo;
+           Status=stat(SpectFile.c_str(),&FileInfo);
+           //returns 0 if successfully get File Infor, -1 if it fails to find the file
+           if(Status==0){
+             cout << "File " << SpectFile << " already exists-We will not overwite it or append to it!\n";
+             exit(0);}
+          } //endif firstwrite
+
+         firstwrite=false;
+         int kountzero=0;
+         int isize=SpectrumWaves.size();
+
+         if(logplot){
+         //strip out the zeros!
+           for(int iz=0; iz < isize; iz++){
+              if(SpectrumDeltaN[iz]<=0.0)kountzero++;
+         }}
+
+         // for PlotIt        
+         int ntype=0;   //points=1   lines=0
+         int ncol=1+nlay;    //Give each line a different material colour
+         int nstyle=0;  // solid or dippled
+         int npoint=1;  //point size
+
+
+         OutSpect.open(SpectFile.c_str(),ios::out | ios::app);
+
+         if(nlay==0)OutSpect << up_to_top << endl;
+
+          if(PlotIt){
+            OutSpect << isize-kountzero <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
+          } 
+          else{       
+            OutSpect << isize-kountzero << endl;
+          } 
+
+         if(logplot){
+
+            for(int i=0; i<isize; i++){
+              if(SpectrumDeltaN[i]>0){
+                  OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << log10(SpectrumDeltaN[i]) << endl;
+              }  //endif  >0
+             } //end for loop}
+         }
+         else{
+
+           for(int i=0; i<isize; i++){
+              OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << SpectrumDeltaN[i] << endl;
+           }
+  
+         }  //end for if logplot else
+
+
+           if(nlay==up_to_top-1){
+
+            if(PlotIt){
+  
+              OutSpect << 1 << "  " <<  1 << endl;
+              OutSpect << "Wave@Number   @per_cm" << endl;
+              OutSpect << 1 << "  " <<  1 << endl;
+              if(logplot){
+                 OutSpect << "log10(Cross@Section)    @cm^2" << endl;}
+              else{
+                 OutSpect << "Cross@Section   @cm^2" << endl;
+              }
+                 OutSpect << "1" << endl;
+
+             for(int laynumber=0; laynumber< up_to_top; laynumber++){
+                OutSpect << "Layer=@" << laynumber << endl;
+             }
+           
+           } //endif for PlotIt}
+         
+
+           } //endif for nlay=up_to_top
+
+           OutSpect.close();    
+         
+         } //endif for outRef
+
 
 
 
 /*****************************************************************************************
         Work out k Distributions
 ******************************************************************************************/           
-
-                          
            SpectrumWaves.erase(SpectrumWaves.begin(), SpectrumWaves.end());
+           SpectrumKays.erase(SpectrumKays.begin(), SpectrumKays.end());                         
+           SpectrumDeltaN.erase(SpectrumDeltaN.begin(), SpectrumDeltaN.end());
            CentreWaves.erase(CentreWaves.begin(), CentreWaves.end());
            CentreLines.erase(CentreLines.begin(), CentreLines.end());
            }  //end loop over layers nlay

@@ -140,8 +140,9 @@ The ``pwd" command tells you what directory you are in at any time.
  For directory names and files that have spaces, you need to put a double quote at the start and end of
 the directory name. 
 
-In your {\it The-DORS} directory create an empty directory called ``HITRAN". This is for the data, {\it don't} put 
-what you anything you might have  just downloaded here. You will encounter  some {\it pdf} files that
+In your {\it The-DORS} you have directory called ``HITRAN" containing only a README file.
+ This directory is for the data, {\it don't} put 
+what anything you might have  just downloaded here. You will encounter  some {\it pdf} files that
  give you a list of references to quote
 for any publications you make using {\it HITRAN}. Naturally, use these for any publications you make
 using the output of the {\it DORS}. Now, you might want to download absolutely everything, after all you get
@@ -152,7 +153,7 @@ also called ``HITRAN2008", go there, and then to ``By-Molecule", download the pd
 go to ``Compressed-files". Download everything here, put them in your ``HITRAN" directory and
 unzip them. You now have a lot of files with names like ``01-hit08.par". That is the archive file
 for molecule 1 in {\it HITRAN 2008}. Two files have an extra ``\_f53"
-in the names. Just edit this out of the names.
+in the names. Just edit this out of the file names.
 
 Now, going back to {\it ftp}, there are some FORTRAN programs to download. These compute the
 partition functions needed to calculate absorption lines.
@@ -160,7 +161,7 @@ We need to get to "HITRAN2008/Global\_Data/Fortran Programs for Partition Sums".
 Download all these and leave them in your ``The-DORS" directory: don't put them in your {\it HITRAN}
 sub-directory.
  If your operating 
-system is case dependent as in UNIX, you need to change some of the names and compile it. That is
+system is case dependent as in UNIX, you need to change some of the names in order to compile it. That is
 \begin{verbatim}
 mv BD_ISO_2002.for BD_ISO_2002.FOR
 mv BD_ISO_82_to_85.for BD_ISO_82_85.FOR

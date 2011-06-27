@@ -7,7 +7,8 @@ using namespace std;
 
 void Questioner(bool& verbose,
                int &nsplit1, int &nsplit2, int &nsplit3, int &nsplit4, bool& vis, double &visb,
-               double &vist, double &lambda1, double &lambda2, bool &rfun, int &iatm, bool &switchR, bool  &switchA, int& itypeu,
+               double &vist, double &lambda1, double &lambda2, double &lambdacut,
+               bool &rfun, int &iatm, bool &switchR, bool  &switchA, int& itypeu,
                int& itypes, int& itypet, int& itypeb, bool& ocean, bool& groundP, bool& groundT,
                int& ihumid, double& groundtemp, double& groundpress,
                bool& default_pause, double& HG, double& HB, double& HT, double& HS, double& HU, int& ngaussL,
@@ -29,8 +30,8 @@ ihumid=-1; groundtemp=-1e6;groundpress=-1; default_pause=true;
    ifstream fp_in;
    fp_in.open(ReadInput, ios::in);
    if(!fp_in.is_open()){ cerr << "Failed to open file (" << ReadInput << ")" << endl;  exit(1);}
-      fp_in >> lambda1 >> lambda2 >> rfun;
-      fp_in >> calcspec >> outspec >> PlotIt, logplot, calcRef, outRef;
+      fp_in >> lambda1 >> lambda2 >> lambdacut >> rfun;
+      fp_in >> calcspec >> outspec >> PlotIt >> logplot >>  calcRef >> outRef;
       fp_in >> ngaussLs;
       fp_in >> icutL >> icutD >> istep;
       fp_in >> vis >>  vist  >> visb;
@@ -58,6 +59,8 @@ ihumid=-1; groundtemp=-1e6;groundpress=-1; default_pause=true;
   cin >> lambda1;
   cout << "Enter highest wavelength value\n";
   cin >> lambda2;}
+  cout <<"Enter Delta lambda for cutoff of wavelength interval" << endl;
+  cin >> lambdacut;
   cout << "Enter 1 if you want to calculate the molecular absorption, 0 if you don't\n";
   cin >> calcspec;
   cout << "Enter 1 if you want to output a fine detailed spectrum, enter 0 otherwise\n";
@@ -239,7 +242,7 @@ ihumid=-1; groundtemp=-1e6;groundpress=-1; default_pause=true;
         cout << "Enter order of Gauss-Legendre quadrature rule for integration over height\n";
         cin >> ngaussL;
 
-        fprintf(fp0, "%lf %lf %d \n", lambda1, lambda2, rfun);
+        fprintf(fp0, "%lf %lf %f %d \n", lambda1, lambda2, lambdacut, rfun);
         fprintf(fp0, "%d %d\n", calcspec, outspec);
         fprintf(fp0, "%d\n", ngaussLs);
         fprintf(fp0, "%d %d\n", icutL, icutD, istep);
