@@ -1,5 +1,6 @@
 g++ -c -g Questioner.cpp
 g++ -c -g WaterVap.cpp 
+g++ -c -g LagrangeInt.cpp 
 g++ -c -g Dors1.cpp 
-g++ -g -o Dors1 Dors1.o Questioner.o WaterVap.o -lgfortran  -ldors
+g++ -g -o Dors1 Dors1.o Questioner.o WaterVap.o LagrangeInt.o -lgfortran  -ldors
 rm *.o

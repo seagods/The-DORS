@@ -57,9 +57,6 @@ double dbvalu_(double*, double*, int* ,int*, int* ,double*, int*, double*);
 // SUBROUTINE DBSQAD (T, BCOEF, N, K, X1, X2, BQUAD, WORK)
 void dbsqad_(double*, double*, int*, int*, double*, double*, double*, double*);
 
-// dbintk  -- order k spline
-// SUBROUTINE DBINTK (X, Y, T, N, K, BCOEF, Q, WORK)
-void dbintk_(double*, double*, double*, int*, int*, double*, double*, double*);
 
 // toms library Gauss quadrature
 // SUBROUTINE WEIGHTCOEFF(N,Q,E,EPS,W,X,WORK)
@@ -89,7 +86,8 @@ void Questioner( bool&,
 void WaterVap(double* , double* , double* ,
               double* , double &, double &, double &, int &, int &, int &);
 
-              
+//Integrate Lagrange interpolation
+double LagrangeInt(double*, double*, int &);
 
 int main(int argc, char* argv[]){
 
@@ -1606,7 +1604,8 @@ int main(int argc, char* argv[]){
                  //we calculate  this alpha for 1g water --- need to correct
                            
                  double convert_to_percm, eps;
-                 convert_to_percm=1.0/massgases[nlay][0]/SlabThick[up_to_top-nlay]/100.; //slab thickness in metres
+                 convert_to_percm=1.0/massgases[nlay][0]/SlabThick[up_to_top-1-nlay]/100.;
+                 //slab thickness in metres 
                  //don't forget the 1/2 pi^2 outside the KK integral!
                  convert_to_percm=convert_to_percm/2.0/pi/pi;
 
@@ -1636,7 +1635,7 @@ int main(int argc, char* argv[]){
                   double ALPHA_DERIV_LEFT[leftwaves]; double ALPHA_DERIV_RIGHT[rightwaves];
                   double DeltaNleft[leftwaves];    double DeltaNright[rightwaves]; // weak susceptibility limit
 
-                  double DeltaN1=0; double DeltaN2=0;
+                  double DeltaN1=0; double DeltaN2=0; double residual;
 
 
                   for(int kk=0; kk<leftwaves; kk++){
@@ -1656,7 +1655,7 @@ int main(int argc, char* argv[]){
                   //tidy the origin if needed (can be - extremely small garbage instead of zero
                   XLEFT[0]=0.0; XRIGHT[0]=0.0;
 
-
+                      //estimate ALPHA_DERIV from splines;
                       //B-Spline over alpha -- want d alpha / d omega --set first derivatve zero at x=0;.
                        KORDER=4; // order of spline
                        KNOPT=1;  //option for no extrapolation outside data
@@ -1682,9 +1681,6 @@ int main(int argc, char* argv[]){
                        IBCL=1; IBCR=2;       //alpha has max at origin. natural spline
                        FBCL=0.0; FBCR=0.0;  // derivatives must be zero --- natural spline on far left
                        IN=rightwaves+2;
-
-                       //estimate ALPHA_DERIV from splines;
-                       //
     
                        double TEE_ALPHA_RIGHT[rightwaves+6];
                        double BCOEF_ALPHA_RIGHT[IN];
@@ -1700,7 +1696,19 @@ int main(int argc, char* argv[]){
                                  ,&ideriv, XRIGHT+kk, &inbv, WORK2_ALPHA_RIGHT); 
                         }
 
-                        for(int n_omega=0; n_omega<leftwaves; n_omega++){  //LOOP OVER OMEGA (left)
+                        //  mixing up linear, quadratic and cubic Lagrange interpolation is bad idea. 
+                        //  apart at ends. (This is what we do here)
+                        //  Copy before new changes is in Dors1Lagrange.cpp
+                        //  Alternatives
+                        //  1.  add 5, 6, 7 pt interpolation to LagrangeInt so 4,5,6,7,3,5,6,7
+                        //  2.  use 4, 5, 6, 7 point interpolation via Aitken and use 2, 3, and 4 point Gauss
+                        //  3. just step n_omega by 4 and interpolate.
+
+                        // Dors1step4.cpp has a copy of this code which  uses alternative 3.
+                        // This simplifies things a lot as far as the code is concerned 
+                       
+
+                        for(int n_omega=0; n_omega<leftwaves; n_omega+=4){  //LOOP OVER OMEGA (left)
 
                             OMEGA=XLEFT[n_omega];
  
@@ -1713,10 +1721,19 @@ int main(int argc, char* argv[]){
                             for(int kk=0; kk< leftwaves; kk++){
                                  if(kk ==n_omega){
                                       ALPHA_LEFT[kk]=0.0;   //mark the divide with a zero value
+                             //         cout << kk << "  " << n_omega << "  "<<XLEFT[kk] << "   " <<  ALPHA_LEFT[kk] << endl;
                                  }
                                  else{
+
                                       ALPHA_LEFT[kk]=ALPHA_LEFT_spare[kk]/(XLEFT[kk]*XLEFT[kk]-OMEGA*OMEGA);
-                               //       cout << kk << "  " << n_omega << "  "<<XLEFT[kk] << "   " <<  ALPHA_LEFT[kk] << endl;
+
+/*
+
+                                      cout << kk <<  "   " << n_omega << "  " 
+                                      <<ALPHA_LEFT[kk] << "  " 
+                                      << 1.0/(XLEFT[kk]*XLEFT[kk]-OMEGA*OMEGA)  <<"  "
+                                      <<XLEFT[kk] << "   " <<  ALPHA_LEFT_spare[kk] << endl;
+*/
                                  }  
                             } // end loop over omegaprime
 
@@ -1732,44 +1749,19 @@ int main(int argc, char* argv[]){
                             bool use_dbint4Left=false, use_dbintkLeft=false
                                , use_dbint4Right=false, use_dbintkRight=false;
 
-                            int korder1, korder2;
+                            int ilagrange=4;
 
                             // first we do the split 
                             int n_omega1=n_omega;  int n_omega2=leftwaves-(n_omega+1);
+
+                            int isubtract=n_omega2%ilagrange;
+                            n_omega2=n_omega2-isubtract;
+
                             double XTEMP1[n_omega1];  double XTEMP2[n_omega2];
                             double ALPHA_TEMP1[n_omega1];  double ALPHA_TEMP2[n_omega2];
 
-                           if(n_omega1==2){
-                                use_dbintkLeft=true; korder1=2;}
 
-                           if(n_omega1==3){
-                                use_dbintkLeft=true; korder1=3;}
-
-                           if(n_omega1==4){
-                                use_dbintkLeft=true; korder1=4;}
-
-                           if(!use_dbintkLeft){
-                               use_dbint4Left=true; korder1=4;}
-                           else {
-                               use_dbint4Left=false;}
-
-                           if(n_omega2==2){
-                                use_dbintkRight=true; korder2=2;}
-
-                           if(n_omega2==3){
-                                use_dbintkRight=true; korder2=3;}
-
-                           if(n_omega2==4){
-                                use_dbintkRight=true; korder2=4;}
-
-
-                           if(!use_dbintkRight){
-                               use_dbint4Right=true, korder1=4;}
-                           else{
-                               use_dbint4Right=false;}
-
-                          if(n_omega1 > 4){ use_dbint4Left=true; use_dbintkLeft=false; korder1=4;}
-                          if(n_omega2 > 4){ use_dbint4Right=true; use_dbintkRight=false; korder2=4;}
+                            DeltaN1=0; DeltaN2=0;
   
 
                             for(int kk=0; kk< leftwaves; kk++){
@@ -1778,13 +1770,13 @@ int main(int argc, char* argv[]){
                                      XTEMP1[kk]=XLEFT[kk];
                                      ALPHA_TEMP1[kk]=ALPHA_LEFT[kk];
                             //         cout << " kk and n_omega1 " << kk << "  " << n_omega1 << endl;
-                                       cout <<  kk <<  XTEMP1[kk] << "  " << ALPHA_TEMP1[kk] << endl;
+                            //           cout <<  kk <<  XTEMP1[kk] << "  " << ALPHA_TEMP1[kk] << endl;
                                    }
                                     if(kk>n_omega){
                                      XTEMP2[kk-n_omega-1]=XLEFT[kk];
                                      ALPHA_TEMP2[kk-n_omega-1]=ALPHA_LEFT[kk];
                             //        cout << " kk-n_omega-1 and n_omega2 " << kk-n_omega-1 << "  " << n_omega2 << endl;
-                                       cout << kk-n_omega-1 << XTEMP2[kk-n_omega-1] << "  " << ALPHA_TEMP2[kk-n_omega-1] << endl;
+                            //           cout << kk-n_omega-1 << XTEMP2[kk-n_omega-1] << "  " << ALPHA_TEMP2[kk-n_omega-1] << endl;
                                      }
                            } //end loop over kk
                            double xrange1L=XTEMP1[0];   double xrange1R=XTEMP1[n_omega1-1];
@@ -1823,128 +1815,59 @@ int main(int argc, char* argv[]){
                            if(inrange){
 
 
-                           DeltaN1=0; DeltaN2=0;
+                           int ilagrange=4;
+                           int chunks;
 
-                           if(use_dbint4Left){
-                           KORDER=4; // order of spline
-                           KNOPT=1;  //option for no extrapolation outside data
-                           IBCL=2; IBCR=2;       //natural spline
-                           FBCL=0.0; FBCR=0.0;  //first derivative must be zero natural spline
-                           IN=n_omega1+2;
+                           //don't trust dbsqad any more
+                           chunks=n_omega1/ilagrange;
 
 
-                           double TEE_ALPHA_TEMP1[n_omega1+6]; double BCOEF_ALPHA_TEMP1[IN];
-                           double WORK_ALPHA_TEMP1[5*(n_omega1+2)]; double WORK2_ALPHA_TEMP1[3*KORDER];
-        
-                           dbint4_(XTEMP1,ALPHA_TEMP1,&n_omega1,&IBCL,&IBCR,&FBCL,&FBCR,
-                               &KNOPT, TEE_ALPHA_TEMP1, BCOEF_ALPHA_TEMP1,&IN, &KORDER, WORK_ALPHA_TEMP1);
-
-                           dbsqad_(TEE_ALPHA_TEMP1, BCOEF_ALPHA_TEMP1, 
-                           &n_omega1, &KORDER, &lim1, &lim2, &DeltaN1, WORK2_ALPHA_TEMP1);
-
-
-                           } //endif use dbint4Left
-
-                          
-
-                           if(use_dbintkLeft){
-
-                           IN=n_omega1+2;
-                           int ktemp=korder1-1; // order of spline linear=2, quad=3, cube=4 
-                           double TEE_ALPHA_TEMP1[n_omega1+2*ktemp]; double BCOEF_ALPHA_TEMP1[IN];
-                           double WORK_ALPHA_TEMP1[(2*ktemp-1)*(n_omega1+2)]; double WORK2_ALPHA_TEMP1[3*korder1];
-            
-                           // odd -no BCs, and we have to supply TEE! (do as in dbint4 with knopt=1)
-                           // note - a lot of the comments in dbint4 and dbintk are wrong!
-                           for(int ll=0; ll < ktemp; ll++){
-                                  TEE_ALPHA_TEMP1[ll]=XTEMP1[0];
-                           }
-                           for(int ll=0; ll < ktemp; ll++){
-                                  TEE_ALPHA_TEMP1[n_omega1+ll]=XTEMP1[n_omega-1];
-                           }
-                           for(int ll=0; ll< n_omega1; ll++){
-                                  TEE_ALPHA_TEMP1[ktemp+ll]=XTEMP1[ll];
+                           ilagrange=4;
+                           for(int m=0; m<chunks; m++){
+                               DeltaN1=DeltaN1+LagrangeInt(XTEMP1+ilagrange*m
+                                                         , ALPHA_TEMP1+ilagrange*m, ilagrange);
                            }
 
-                           dbintk_(XTEMP1,ALPHA_TEMP1,TEE_ALPHA_TEMP1,
-                                   &n_omega1, &korder1, BCOEF_ALPHA_TEMP1, WORK_ALPHA_TEMP1, WORK2_ALPHA_TEMP1);
-
-                           dbsqad_(TEE_ALPHA_TEMP1, BCOEF_ALPHA_TEMP1, 
-                           &n_omega1, &KORDER, &lim1, &lim2, &DeltaN1, WORK2_ALPHA_TEMP1);
 
 
+                          //don't trust dbsqad any more
+                           chunks=n_omega2/ilagrange;
 
-
-                           } //endif use dbintkLeft
-
-
-
-                           if(use_dbint4Right){
-
-                           KORDER=4; // order of spline cubic=4 for dbint4
-                           KNOPT=1;  //option for no extrapolation outside data
-                           IBCL=2; IBCR=2;       //natural spline
-                           FBCL=0.0; FBCR=0.0;  //first derivative must be zero natural spline
-                           IN=n_omega2+2;
-
-                           double TEE_ALPHA_TEMP2[n_omega2+6]; double BCOEF_ALPHA_TEMP2[IN];
-                           double WORK_ALPHA_TEMP2[5*(n_omega2+2)]; double WORK2_ALPHA_TEMP2[3*KORDER];
-        
-                           dbint4_(XTEMP2,ALPHA_TEMP2,&n_omega2,&IBCL,&IBCR,&FBCL,&FBCR,
-                               &KNOPT, TEE_ALPHA_TEMP2, BCOEF_ALPHA_TEMP2,&IN, &KORDER, WORK2_ALPHA_TEMP2);
-
-
-                           dbsqad_(TEE_ALPHA_TEMP2, BCOEF_ALPHA_TEMP2,
-                           &n_omega2, &KORDER, &lim3, &lim4, &DeltaN2, WORK2_ALPHA_TEMP2);
-
-
-                           } //endif use dbint4Right
-
-                          
-
-                           if(use_dbintkRight){
-
-                           IN=n_omega2+2;
-                           int ktemp=korder2-1; // order of spline
-                           double TEE_ALPHA_TEMP2[n_omega2+2*ktemp]; double BCOEF_ALPHA_TEMP2[IN];
-                           double WORK_ALPHA_TEMP2[(2*ktemp-1)*(n_omega1+2)]; double WORK2_ALPHA_TEMP2[3*korder2];
-                           // odd -no BCs, and we have to supply TEE! (do as in dbint4 with knopt=1)
-                           // note - a lot of the comments in dbint4 and dbintk are wrong!
-                           for(int ll=0; ll < ktemp; ll++){
-                                  TEE_ALPHA_TEMP2[ll]=XTEMP2[0];
-                           }
-                           for(int ll=0; ll < ktemp; ll++){
-                                  TEE_ALPHA_TEMP2[n_omega2+ll]=XTEMP2[n_omega-1];
-                           }
-                           for(int ll=0; ll< n_omega2; ll++){
-                                  TEE_ALPHA_TEMP2[ktemp+ll]=XTEMP2[ll]; 
+                           DeltaN2=0;
+                           for(int m=0; m<chunks; m++){
+                               DeltaN2=DeltaN2+LagrangeInt(XTEMP2+ilagrange*m
+                                                         , ALPHA_TEMP2+ilagrange*m, ilagrange);
                            }
 
-                           dbintk_(XTEMP2,ALPHA_TEMP2,TEE_ALPHA_TEMP2,
-                                   & n_omega2, &korder2, BCOEF_ALPHA_TEMP2, WORK_ALPHA_TEMP2, WORK2_ALPHA_TEMP2);
 
+                           residual=eps/XLEFT[n_omega]*ALPHA_DERIV_LEFT[n_omega];
 
-                           dbsqad_(TEE_ALPHA_TEMP2, BCOEF_ALPHA_TEMP2,
-                           &n_omega2, &KORDER, &lim3, &lim4, &DeltaN2, WORK2_ALPHA_TEMP2);
+                           DeltaN1=convert_to_percm*DeltaN1; 
+                           DeltaN2=convert_to_percm*DeltaN2;
+                           residual=convert_to_percm*residual;
 
+                           DeltaNleft[n_omega]=DeltaN1+DeltaN2+residual;
 
+              //          cout << "*********************************************************************\n";
 
-                           } //endif use dbintkRight
-
-
-                           DeltaNleft[n_omega]=DeltaN1+DeltaN2
-                                              +eps/XLEFT[n_omega]*ALPHA_DERIV_LEFT[n_omega];
-                           DeltaNleft[n_omega]=DeltaNleft[n_omega]*convert_to_percm;
+                        cout << n_omega1 << "  " << n_omega2 << "  "
+                             << XLEFT[n_omega] << "  " 
+                             << DeltaN1 << "  "
+                             << DeltaN2 << "  "
+                             <<  residual << "  "
+                             << DeltaNleft[n_omega] << endl;
 
                            } //endif inrange
 
                         }  //endif(n_omega>0 n_omega<leftwaves-2
+
+                        // for n_omega= origin, origin+one step, upper limit - one step, upper limit;
                         DeltaNleft[0]=0.0; 
                         DeltaNleft[1]=convert_to_percm*eps/XLEFT[n_omega]*ALPHA_DERIV_LEFT[n_omega]; 
                         DeltaNleft[leftwaves-2]=convert_to_percm*eps/XLEFT[n_omega]*ALPHA_DERIV_LEFT[n_omega]; 
                         DeltaNleft[leftwaves-1]=0.0; 
 
-                   //     cout << XLEFT[n_omega] << "  " << DeltaNleft[n_omega] << endl;
+
                            
                 
                         }  //end loop over OMEGA (left)
