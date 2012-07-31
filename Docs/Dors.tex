@@ -61,12 +61,12 @@ will be just as easy on a UNIX system. Many of  dependencies are  various bits o
 available mathematical software which we shall give details of below. Apart from mathematical
 software, the {\it DORS}
  depends on the {\it HITRAN}
-molecular database \cite{RothmanETAL:Mybib}.
+molecular database \cite{RothmanETAL:Mybib} \cite{RothmanETAL96:Mybib} \cite{RothmanETAL08:Mybib} \footnote{copies available from the HITRAN website}.
 
  In order to get started, there is a only a moderate
 amount of work to do on a Linux or UNIX system. Whatever the operating system, you will need a C++ compiler.
-The {\it Gnu Compiler Collection} (gcc) includes C++, and is  completely free. It requires a {\it POSIX} compliant system.
-Linux and Mac OSX are { \it POSIX compliant}, and most Linux distributions come with gcc. 
+The {\it Gnu Compiler Collection} (gcc) includes C++, and is  completely free. It requires a {\it POSIX} compliant system. UNIX, 
+Linux and Mac OSX are { \it POSIX compliant}, and Linux distributions come with gcc. 
 
  So what if you have
 a PC running MS Windows? 
@@ -126,7 +126,7 @@ For the user name, you just type ``anonymous", and {\it please} use your {\it re
  email address as the password. If you haven't used ftp before, just type ``help" at the ftp prompt.
 This gives you a list of {\it ftp} commands. 
 You shall see ``cd", ``dir", and ``mget" in the list, just do ``help mget" for instance, and you are told
-what ``mget" does.  If you normaly use MS Windows, note 
+what ``mget" does.  If you normally use MS Windows, note 
 that {\it everything} in ftp, Linux,  and Cygwin is case sensitive. 
 For instance, ftp will recognise 	``cd DirName" for ``change directory to
  DirName", but
@@ -140,11 +140,11 @@ The ``pwd" command tells you what directory you are in at any time.
  For directory names and files that have spaces, you need to put a double quote at the start and end of
 the directory name. 
 
-In your {\it The-DORS} you have directory called ``HITRAN" containing only a README file.
+In your {\it The-DORS} directory you have subdirectory called ``HITRAN" containing only a README file.
  This directory is for the data, {\it don't} put 
-what anything you might have  just downloaded here. You will encounter  some {\it pdf} files that
+ anything you might have  just downloaded here. You will encounter  some {\it pdf} files that
  give you a list of references to quote
-for any publications you make using {\it HITRAN}. Naturally, use these for any publications you make
+for any publications you make using {\it HITRAN}. Naturally, refer to these in any  publications you make
 using the output of the {\it DORS}. Now, you might want to download absolutely everything, after all you get
 things like {\it JavaHAWKS} and copies of papers describing {\it HITRAN}. I shall only mention what you need
 to download to get the {\it DORS} running. Go back to ``Global\_Data" and download ``molparam.txt".
@@ -178,12 +178,9 @@ programs files will go into the {\it Dors library}.
 
 You shall also need to go to http://rtweb.aer.com/ and download the $MT CKD$ water vapour continuum program (version 2.5). The continuum model has been under development since the original paper by Clough, Kneizys, and Davies \cite{MTCKD:Mybib}. The release notes provide plenty of references as to how the subject has evolved. I have modified the driver so it can be called
 as a function from the main program. I find the code difficult to follow --- it is meant to be a subroutine for $LBLRTM$
-which you can also obtaing from this site. Once you have downloaded it, overwrite the "cntnm_prog.f"  with the one I provide.
+which you can also obtain from this site. Once you have downloaded it, overwrite the "cntnm\_prog.f"  with the one I provide.
 You then need to modify ``makefile.common". You need to change "-Wall" in ``FCFLAGS"  to "-fPIC -g -c -Wall" so it can go into the Dors library. Then run gmake as in the ``README" in the build directory. You will now have an object file in the ``.obj"
  sub-directory which you can copy to the ``dorslib" directory.
-
-
-
 
 
 \section{Library Programs - Building the Dors Library}
@@ -191,19 +188,17 @@ You then need to modify ``makefile.common". You need to change "-Wall" in ``FCFL
 As well as these {\it FORTRAN} programs, ``The-Dors" requires various mathematical programs which we shall
  combine into a library. The good news is
 that they are all free, copyright free, and patent free. You can distribute them freely (as long as you don't say you wrote
- them or stupid stuff like that). If you do distribute them - say where they are from - and please don't edit them without saying so!  
+ them, or try and sell them,  or stupid stuff like that). If you do distribute them - say where they are from - and please don't edit them without saying so!  
 
 However, I have chosen {\it not} to distribute
 them with ``The-DORS" (The reason is I don't have the space in my {\it github} account to distribute
 them from there.  Instead, ``The-DORS" file contains a subdirectory called  {\it dorslib}.
 This contains a plain text file called {\it Instructions.txt}. It tells you what to do if you put your {\it The-Dors}
 directory in your home directory. You will have to make your own adjustments if you put it elsewhere.
-I have distributed {\it HUMLIK.f} \cite{BobWells:MyBib} which calculates Voigt profiles
- \footnote{See http://www.atm.ox.ac.uk/wells/voigt.html}
+I have distributed {\it HUMLIK.f} \cite{BobWells:MyBib} which calculates Voigt profiles. It seems this is no longer
+distributed by Oxford university, so we are distributing a copy with The-DORS.
 
 The Instructions.txt file tells you all the maths library routines you need to download, and where to download them from. 
-(I may put them all on {\it zSHARE} so you can download them all as a single gzipped tarfile as they take up
-too much space for to put them on a free github account).
 As well as this
 there are two scripts that will build them all into a single library archive by running {\it script1} and then {\it script2}
 and finishing off the instructions in the {\it Instructions.txt} file.
@@ -213,7 +208,8 @@ are actually incorporated into the main one (BD\_TIPS\_2003) via include stateme
 
  In your {\it The-DORS} directory there 
 is a script {\it compile} that compiles ``The-DORS". (Make sure your compile script is executable by doing ``chmod u+x compile"
-at the command line.) Do likewise for the scripts in your {\it dorslib} director.
+at the command line.) Do likewise for the scripts in 
+your {\it dorslib} directory.
 
 
 

@@ -23,16 +23,16 @@
 // GODSALVE HAS NO OBLIGATIONS TO PROVIDE MAINTAINANCE, SUPPORT, UPDATES, 
 // ENHANCEMENTS, OR MODIFICATIONS IF HE CHOOSES NOT TO DO SO.
 //--------------------------------------------------------------------------------
-#include <stdio.h>
-#include <iostream>
-#include <fstream>
-#include <stdlib.h>
+#include <stdio.h>  //standard input output
+#include <iostream> // input output (cin cout etc)
+#include <fstream>  //file stream
+#include <stdlib.h> //string conversion + malloc and calloc
 #include <math.h>
-#include <iomanip>
-#include <sstream>
-#include <string>
-#include <vector>
-#include <sys/stat.h>
+#include <iomanip>  //setprecision
+#include <sstream>  //string stream
+#include <string>   // nice string operations
+#include <vector>   // a bit like a souped up stack
+#include <sys/stat.h>  //POSIX stuff including file queries
 using namespace std;
 
 // fortran programs, use nm (name mangle) on object files and .so files
@@ -49,13 +49,9 @@ void dbint4_(double*, double*, int*, int*, int*,  double*, double*,
               int*, double*, double*, int*, int*, double*);
 
 // dbvalu evalutes the spline or a derivative of the function
-// dbspev similarr, but calculates a vector of derivatives
+// dbspev similar, but calculates a vector of derivatives
 // DOUBLE PRECISION FUNCTION DBVALU (T, A, N, K, IDERIV, X, INBV, WORK)
 double dbvalu_(double*, double*, int* ,int*, int* ,double*, int*, double*);
-
-// dbsqad integrates the function from spline
-// SUBROUTINE DBSQAD (T, BCOEF, N, K, X1, X2, BQUAD, WORK)
-void dbsqad_(double*, double*, int*, int*, double*, double*, double*, double*);
 
 
 // toms library Gauss quadrature
@@ -86,15 +82,12 @@ void Questioner( bool&,
 void WaterVap(double* , double* , double* ,
               double* , double &, double &, double &, int &, int &, int &);
 
-//Integrate Lagrange interpolation
-double LagrangeInt(double*, double*, int &);
-
 int main(int argc, char* argv[]){
 
   bool verbose;   //verbose mode for input, read from file if false;
   //verbose output bools
   bool verbose_out=true;  // output loads of info to standard output
-  bool verbose_height=false;   //output height integration info to std::out
+  bool verbose_height=true;   //output height integration info to std::out
   bool verbose_spect=false;   // output spectrum details to std out
 /**************************************************************************************
    Stage 1:  declare and define various data to define the atmosphere
@@ -119,6 +112,9 @@ int main(int argc, char* argv[]){
              4C: calculate the spectrum.
 ****************************************************************************************/
 
+   double ShiftLine=0.0;
+   // Make 1.0 or 1.0 depending on whether we bother with line shifts
+
 
 /************************   BEGIN STAGE 1  *********************************************/
   // Four Aerosol layers, each to be split into nsplit slabs
@@ -126,7 +122,7 @@ int main(int argc, char* argv[]){
   int nsplit1,nsplit2,nsplit3,nsplit4;    
   // boundary layer visibility , troposphere visiblility, wavelength1, wavelength2
   double visb, vist, lambda1, lambda2, lambdacut;
-  bool rfun=true;  //true if we are using myresp.ddat or myrespX.dat as a response function file
+  bool rfun=true;  //true if we are using myresp.dat or myrespX.dat as a response function file
   bool vis;  //true if entered as visibility, false if entered as optical depth.
   // default atmosphere 1-6 or user defined
   int iatm;    //atmosphere ID
@@ -304,9 +300,11 @@ int main(int argc, char* argv[]){
 
    //Some constants
 
-   double pi,abszero,R,AV,MWA,delta,nucleon;
+   double pi,abszero,R,AV,MWA,delta,nucleon,rootpi,twopi;
 
    pi=acos(-1.0);               //Well pi obviusly
+   twopi=2.0*pi;
+   rootpi=sqrt(pi);
    abszero=273.15;              //0 degrees C in Kelvin
    R=8.314472;                  //Universal gas constant
    AV=6.0221415e23;             //Avogadro's number;
@@ -319,9 +317,6 @@ int main(int argc, char* argv[]){
    double RefPress=1013*100.0; //Converts mbar to Pascals    
    double C2=1.4387752;   //=hc/Boltzman constant=second radiation constant. N.B.  units are Kelvin per cm
                           //so C2*wavenumber/T per cm is (photon energy)/kT
-   double log2=log(2.0);
-   double sqrtlog2=sqrt(log2);
-   double sqrtlog2opi=sqrt(log2/pi);
    double Boltz=1.3806503e-16;  //Boltzmann's constant (cgs units)
    //speed of light in cm per sec.
    double Speedlight=2.99792458e10;
@@ -538,7 +533,7 @@ int main(int argc, char* argv[]){
                          //We shall need humidity for aerosol hygroscopic growth
     double Hum1[idata];  //Hum1 and Humids1 needed to store humidity values over liquid water
     double Hum2[idata];  //Hum2 and Humids2 needed to store humidity values over ice
-    double GasPPM[idata][ngas];  //Gas concentration of the selected gasess in ppm
+    double GasPPM[idata][ngas];  //Gas concentration of the selected gases in ppm
     double x1;
     //now read in data for gases
     for(int i=0;i<ngas;i++){
@@ -743,7 +738,6 @@ int main(int argc, char* argv[]){
                                  ,&ideriv,HeightFloors+i,&inbv,WORK2);
 
         //we shall do all calculations ground up
-        // but output them top down  --- HeightFloors is top down
            if(i==up_to_top-1){
               SlabThick[i]=HBDRY[4]-HeightFloors[i];
                 if(verbose_height)cout << "Floors " << HeightFloors[i] << " "  <<floorpress[i] << " " << FloorTemp[i] <<
@@ -751,8 +745,11 @@ int main(int argc, char* argv[]){
                }
               else{
               SlabThick[i]=HeightFloors[i+1]-HeightFloors[i];
-                if(verbose_height)cout << "Floors " << HeightFloors[i] << " "  <<floorpress[i] << " " << FloorTemp[i] <<
-                " " << SlabThick[i] << endl;
+                if(verbose_height){
+                  cout << "Floors " << HeightFloors[i] << " "  <<floorpress[i] << " " << FloorTemp[i] <<
+                  " " << SlabThick[i] << endl;
+                //  cout << i << " " << HeightFloors[i] << endl;
+                  }
                }
          } //end i<up_to_top loop
 
@@ -811,7 +808,7 @@ int main(int argc, char* argv[]){
         double G[iheight];    //fine grid data gas ppm, spare copy
         double Humids1[iheight];   //fine grid data version of Hum1
         double Humids2[iheight];   //fine grid data version of Hum2
-        double Gas[iheight][ngas];  //fine grid array of gas ppm for all gases not ignored
+        double Gas[iheight][ngas];  //fine grid array of gas ppm for all gases which are not ignored via gasmask
 
         for(int n=0;n<ngas;n++){
            for(int i=0;i<idata;i++)
@@ -853,10 +850,11 @@ int main(int argc, char* argv[]){
        int kountS=0;       //kount slabs down
        int islab=up_to_top;
        double AvTemp[up_to_top]; double  AvPress[up_to_top];
-       //mass of air (per square metre) in each layet and the total mass of all layers
+       //mass of air (per square metre) in each layer and the total mass of all layers
        double massgas[up_to_top]; double totalmass=0.0;
        //mass of each constituent in each layer and the total mass
        double massgases[up_to_top][ngas]; double  totalmasses[ngas];
+       double densgases[up_to_top][ngas]; 
 
        int idown=0;
        for(int i=0; i<ngas; i++){
@@ -1006,6 +1004,7 @@ int main(int argc, char* argv[]){
         // g  per square cm = Kg per square metre /1000*10000 
         // We have calculated Kg per square metre---divide by 10 to get g per cm^2.
         //
+        //
 
         for(int k=0; k<ngas; k++){
           for(int i=0; i<up_to_top; i++){
@@ -1015,17 +1014,26 @@ int main(int argc, char* argv[]){
         }
         totalmass=totalmass/10.0/correction;
 
+
+
         if(verbose_out)cout << "gases in each layer --- top down --- g per cm^2\n";
+        // Will need gas density in g cm^{-3} for refractive index
+
         for(int i=0; i<up_to_top; i++){ //top down actually
             for(int k=0; k < ngas ; k++){
-                  if(verbose_out)cout << massgases[i][k] << " ";}
-                  if(verbose_out)cout << endl;}
+                  densgases[i][k]=massgases[i][k]/SlabThick[up_to_top-1-i]/100.0;
+                  //divided by 100 because slabthick in metres - want cm^{-3}
+             }
+        }
+
         if(verbose_out)cout << "totals\n";
+
         for(int k=0; k < ngas ; k++){
              if(verbose_out)cout << totalmasses[k] << " ";}
 
         if(verbose_out)cout <<  "  totalmass=" << totalmass << "g per cm^2" << "  ground pressure now "
                             << 9.81*10*totalmass << " Pascals" <<endl; 
+
 
 /***************************************************************************************
                           END STAGE 3
@@ -1060,11 +1068,19 @@ int main(int argc, char* argv[]){
       //look at wavenumbers nu1-cutoff to nu2+cutoff;
       double nu1, nu2, nu1X, nu2X, lambda1X, lambda2X;
       nu1=1e4/lambda2; nu2=1e4/lambda1;
+      
+      // this nu_cut just widens the wavelength range to include lines from outside.
+
       nu_cut=lambdacut/lambda1*nu1;
       nu1X=nu1-nu_cut;
       nu_cut=lambdacut/lambda2*nu2;
       nu2X=nu2+nu_cut;
       lambda1X=1.0e4/nu2X; lambda2X=1.0e4/nu1X;
+
+      //later on nu_cut is used as line dependent cut off
+
+      cout << "nu1 nu2 " << nu1 << "  " << nu2  <<endl;
+      cout << "lambda1  lambda2  " << lambda1 << "  " << lambda2 << endl;
      
       cout << "nu1X nu2X " << nu1X << "  " << nu2X  <<endl;
       cout << "lambda1X  lambda2X  " << lambda1X << "  " << lambda2X << endl;
@@ -1171,7 +1187,7 @@ int main(int argc, char* argv[]){
           
           iss[3].str(entry[3]);
           iss[3] >> S_intense;
-          linestrengths[Iso-1].push_back(S_intense);
+          linestrengths[Iso-1].push_back(S_intense/rootpi);  //rootpi from HUMLIK
           if(verbose_spect)cout << "S_intense="  << S_intense<< endl;
 
           // pick out the maximum line strength for each isotopologue
@@ -1184,7 +1200,8 @@ int main(int argc, char* argv[]){
 
           iss[4].str(entry[4]);
           iss[4] >> Einstein_A;
-          if(verbose_spect)cout << "Einstein_A="  << Einstein_A<< endl; //not used for local thermodynamic equilibrium
+          if(verbose_spect)cout << "Einstein_A="  << Einstein_A<< endl; 
+          //not used for local thermodynamic equilibrium
 
           iss[5].str(entry[5]);
           iss[5] >> gamma_air;
@@ -1292,7 +1309,7 @@ int main(int argc, char* argv[]){
          //BD_TIPS_2003 Routine provided by HITRAN.
 
         bd_tips_2003_(ig_fort, RefTemp, k_fort, Refgee_i, QT);
-        ofstream OutSpect;
+        ofstream OutSpect; ofstream RefSpect; ofstream TauSpect;
         //FOR EACH LAYER
         for(int nlay=0; nlay < up_to_top; nlay++){
             TempNlay=AvTemp[nlay];
@@ -1304,7 +1321,6 @@ int main(int argc, char* argv[]){
  
             double wavenumlines[nlines];    // temporary copies
             double strengthlines[nlines];
-            double knaughtlines[nlines];
             double alphaLorentzA[nlines];  //for air -add partial self and partial pressures later;
             double alphaDop[nlines];
             double widthlines[nlines];
@@ -1317,14 +1333,19 @@ int main(int argc, char* argv[]){
             for(int l=0; l<nlines;l++){
               if(QT>0){
               wavenumlines[l]=linecentres[k][l];
-              //Voigt function needs half widths-not 1/e-hence log2
-              alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress)
-                          /Speedlight*sqrt(2.0*Boltz*TempNlay*log2/(AllMolW[ig][k]*nucleon));
+              //This is a half width -- dont want it
+//              alphaDop[l]=(wavenumlines[l]-ShiftLine*lineShift[k][l]*AvPress[nlay]/RefPress)
+//                          /Speedlight*sqrt(2.0*Boltz*TempNlay*log2/(AllMolW[ig][k]*nucleon));
+               //Want 1/e width =half width divided by sqrt(log(2))
+               alphaDop[l]=(wavenumlines[l]-ShiftLine*lineShift[k][l]*AvPress[nlay]/RefPress)
+                          /Speedlight*sqrt(2.0*Boltz*TempNlay/(AllMolW[ig][k]*nucleon));
+              // HITRAN 96 Appendix A. "Hitran Parameters: Definitions and Usage"
+              // Ref Paper, HITRAN 96 eqn.A.11 + defn gamma_air (not included self broadening yet)
               alphaLorentzA[l]=linegammaAir[k][l]*AvPress[nlay]/RefPress*pow(RefTemp/TempNlay,lineTdep[k][l]);
+              // Ref Paper HITRAN 96 eqn A.10
               strengthlines[l]=linestrengths[k][l]*QTref[ig][k]/QT
                       *exp(-C2*lineLSE[k][l]/TempNlay)/exp(-C2*lineLSE[k][l]/RefTemp)
                       *( 1.0-exp(-C2*linecentres[k][l]/TempNlay) )*( 1.0-exp(-C2*linecentres[k][l]/RefTemp) );
-              knaughtlines[l]=strengthlines[l]/alphaDop[l]*sqrtlog2opi;
               }
               else{
                  cout << "Error: BD_TIPS_2003 returned QT=" << QT << endl;
@@ -1334,17 +1355,20 @@ int main(int argc, char* argv[]){
             }  //end loop over nlines
 
 /*******************************BEGIN STAGE 4B PROPER - WORK OUT SPECTRUMWAVES **********************/
-            vector<double> SpectrumWaves; vector<double>SpectrumKays;
+            vector<double> SpectrumWaves; 
+            vector<double>SpectrumKays;  //extinction
+            vector<double>SpectrumDeltaN;  //Refractive index minus one
+
             vector<int> CentreWaves;  //which values of nu in SpectrumWaves are at line centres?
-            vector<int> CentreLines;
+
             SpectrumWaves.clear();
             CentreWaves.clear();
-            CentreLines.clear();
+
+            SpectrumKays.clear();
+            SpectrumDeltaN.clear();
+ 
             double startnu,stepnu,tempnu,currentnu0,
             currentwidth,currentwidthL,currentwidthD,nextnu0,last_stopnu, stopnu, Wtol;
-
-            vector<double>SpectrumDeltaN;
-            SpectrumDeltaN.clear();
 
 
             Wtol=0.000001;  //because of fortran F12.6  for wave number in par file
@@ -1354,7 +1378,8 @@ int main(int argc, char* argv[]){
             bool skipline=false;
             double midpoint;
 
-            while(icurrent < nlines){  //we get some "double lines" -skip the next line if it it's the same nu0
+            while(icurrent < nlines){  
+              //we get some "double lines" -skip the next line if it it's the same nu0
               if(skipline){
                  skipline=false;
                  //icurrent has already been incremented
@@ -1363,12 +1388,12 @@ int main(int argc, char* argv[]){
                  //the two transitions with the same frequency have different widths and strengths
                  //so it must appear in the CentreWaves list. It will be the last centre wave number.
                  CentreWaves.push_back(CentreWaves[CentreWaves.size()-1]);
-                 CentreLines.push_back(CentreLines[CentreLines.size()-1]);
                  //current nu0 is the same as last nu0's
                  currentnu0=wavenumlines[icurrent];
                  if(icurrent<nlines){
-                    nextnu0=wavenumlines[icurrent+1];}
-                 currentnu0=currentnu0-lineShift[k][icurrent]*AvPress[nlay]/RefPress;
+                    nextnu0=wavenumlines[icurrent+1];
+                 }
+                 currentnu0=currentnu0-ShiftLine*lineShift[k][icurrent]*AvPress[nlay]/RefPress;
                  //set current width
                  currentwidthD=alphaDop[icurrent]*icutD;
                  currentwidthL=alphaLorentzA[icurrent]*icutL;
@@ -1380,21 +1405,26 @@ int main(int argc, char* argv[]){
                        whichcut=icutD;}
                  else{
                      currentwidth=currentwidthL;
-                     whichcut=icutL;}
+                     whichcut=icutL;
+                     }
 
                      widthlines[icurrent]=currentwidth;
                      icurrent++;
-              }
-              else{
-                currentnu0=wavenumlines[icurrent];
-                if(icurrent<nlines-1){               
-                  nextnu0=wavenumlines[icurrent+1];
-                   if(currentnu0==nextnu0){
-                     skipline=true;
+              }   // end if skipline is true
+              else{ 
+                  //skipline is false
+                  currentnu0=wavenumlines[icurrent];
+                  if(icurrent<nlines-1){               
+                    nextnu0=wavenumlines[icurrent+1];
+                    if(currentnu0==nextnu0){
+                      skipline=true;
+                    }
                    }
-                }
+
+                   //skipline is mostly still false, but occasionally nextnu0 is same
+                   //as currentnu0  --- but occasionally skipline will be reset to true
               
-              currentnu0=currentnu0-lineShift[k][icurrent]*AvPress[nlay]/RefPress;
+              currentnu0=currentnu0-ShiftLine*ShiftLine*lineShift[k][icurrent]*AvPress[nlay]/RefPress;
               //set current width
               currentwidthD=alphaDop[icurrent]*icutD;
               currentwidthL=alphaLorentzA[icurrent]*icutL;
@@ -1412,12 +1442,8 @@ int main(int argc, char* argv[]){
 
               widthlines[icurrent]=currentwidth;
 
-              if(currentnu0-nu_cut<last_stopnu)
-                   {
-                   startnu=last_stopnu+stepnu;
-                   }
-
-              else {startnu=currentnu0-nu_cut;}
+              if(currentnu0-nu_cut<last_stopnu){
+                   startnu=last_stopnu+stepnu; } else {startnu=currentnu0-nu_cut;}
 
               tempnu=startnu;
 
@@ -1431,30 +1457,35 @@ int main(int argc, char* argv[]){
               if(tempnu<currentnu0-Wtol){
                    SpectrumWaves.push_back(currentnu0);
                    CentreWaves.push_back(kountwaves);
-                   CentreLines.push_back(icurrent);
                    kountwaves++;}
               else{
                    SpectrumWaves.pop_back();
                    kountwaves--;
                    SpectrumWaves.push_back(currentnu0);
                    CentreWaves.push_back(kountwaves);
-                   CentreLines.push_back(icurrent);
                    kountwaves++;}
+
+
               bool double_last_line=false;
+
+              //Start If Else
               if(!skipline){
                  midpoint=(currentnu0+nextnu0)/2.0;}
               else{
+
                  if(icurrent+2<nlines){
-                   nextnu0=wavenumlines[icurrent+2];
-                 }
+                   nextnu0=wavenumlines[icurrent+2];}
                  else{
-                   double_last_line=true;
-                 }
-                 midpoint=(currentnu0+nextnu0)/2.0;
-              }
+                   double_last_line=true;}
+
+                midpoint=(currentnu0+nextnu0)/2.0;
+              } //End If Else
+
               if(icurrent==nlines-1){               
                   stopnu=currentnu0+nu_cut;
               }//last line -- nothing to the right
+
+              //Start If Else
               if(double_last_line){
                   stopnu=currentnu0+nu_cut;
               }
@@ -1462,8 +1493,9 @@ int main(int argc, char* argv[]){
                 if(midpoint > currentnu0+nu_cut){
                   stopnu=currentnu0+nu_cut;}
                   else{
-                  stopnu=midpoint;}
-              }
+                  stopnu=midpoint;
+                }
+              } //End If Else
 
               tempnu=currentnu0; //start at line centre and step up
               bool past_it=false;
@@ -1484,9 +1516,13 @@ int main(int argc, char* argv[]){
                   kountwaves++;
                }
                last_stopnu=tempnu;
+
                icurrent++;
               } //end of if else for skipline
            } //end of while icurrent << nlines
+
+/*******************************END STAGE 4B  -- WE HAVE SPECTRUMWAVES ***************/
+/*******************************BEGIN STAGE 4C  KAYWAVES *****************************/    
 
 
            int templength=SpectrumWaves.size();
@@ -1494,33 +1530,21 @@ int main(int argc, char* argv[]){
            for(int l=0; l<templength-1; l++){
               SpectrumKays.push_back(myzero);
               SpectrumDeltaN.push_back(myzero);
-           //chop this next bit of loop out once all the above thoroughly tested
-              if(l==0)
-           //   cout << "start of " << templength << " wave numbers--wave number=" << SpectrumWaves[l] << endl;
-              if(SpectrumWaves[l+1] <= SpectrumWaves[l]){
-                    cout << "Error at l=" << l << "  layer=" << nlay << "  Iso=" << k << endl;
-                    exit(0);
-              }
-           //   if(l==templength-1)
-           //   cout << "end of " << templength << " wave numbers--wave number=" << SpectrumWaves[l] << endl;
-           }
-           SpectrumKays.push_back(myzero); 
-           SpectrumDeltaN.push_back(myzero);          
+           }    
 
-           double xfac, yfac, xtemp, width, alphaD, alphaL;
+           double yfac;
+           double   xtemp, width, alphaD, alphaL;
            int leftwaves, rightwaves, iwave, SpectrumSize;
            int nulength=CentreWaves.size();
            int speclength=SpectrumWaves.size();
-/*******************************END STAGE 4B  -- WE HAVE SPECTRUMWAVES ***************/
-/*******************************BEGIN STAGE 4C  KAYWAVES *****************************/
+
            
            for(int l=0; l<nulength-1; l++){
-              currentnu0=wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress;
+              currentnu0=wavenumlines[l]-ShiftLine*lineShift[k][l]*AvPress[nlay]/RefPress;
               width=widthlines[l];   //cutoff from previous loop
               alphaD=alphaDop[l];
               alphaL=alphaLorentzA[l];
-              xfac=log2/alphaD;
-              yfac=alphaL/alphaD*log2; 
+              yfac=alphaL/alphaD; 
               //Need to calculate Xvector for HUMLIK
               //But it needs to be ordered. We will have a normal array (ordered)
               // and a C++ vector (disordered)
@@ -1547,7 +1571,7 @@ int main(int argc, char* argv[]){
               } 
 
               rightwaves=1;
-              //linecentre then everything within range on left
+              //linecentre then everything within range on right
 
               if(iwave+rightwaves<speclength-1){
               xtemp=SpectrumWaves[iwave+rightwaves];
@@ -1572,11 +1596,11 @@ int main(int argc, char* argv[]){
 
               double XVEC[Nwaves],KVEC[Nwaves];
               for(int j=leftwaves-1; j>=0; j--){
-                  XVEC[leftwaves-1-j]=(Xvector[j]-Xvector[0])*xfac;
+                  XVEC[leftwaves-1-j]=(Xvector[j]-Xvector[0])/alphaD;
                   KVEC[leftwaves-1-j]=0.0;
               }
              for(int j=leftwaves; j< Nwaves; j++){
-                  XVEC[j]=(Xvector[j]-Xvector[0])*xfac;
+                  XVEC[j]=(Xvector[j]-Xvector[0])/alphaD;
                   KVEC[j]=0.0;
               }
               //calculate voigt profile
@@ -1584,322 +1608,38 @@ int main(int argc, char* argv[]){
 
               for(int j=0; j<leftwaves; j++){
                   SpectrumKays[ISpect[leftwaves-1-j]]=SpectrumKays[ISpect[leftwaves-1-j]]
-                                                     +KVEC[j]*knaughtlines[l];
-             
+                                                     +(KVEC[j]/alphaD)*strengthlines[l];
+
+                  if(outRef)SpectrumDeltaN[ISpect[leftwaves-1-j]]=SpectrumDeltaN[ISpect[leftwaves-1-j]]
+                           +(currentnu0-SpectrumWaves[ISpect[leftwaves-1-j]])
+                           /SpectrumWaves[ISpect[leftwaves-1-j]]/alphaL
+                           *(KVEC[j]/alphaD)*strengthlines[l]/twopi;
+
             /*      cout << setprecision(11) << XVEC[j] << " K= " << KVEC[j] << " Left-1-j  "
                        << leftwaves-1-j << "  ISpect=" << ISpect[leftwaves-1-j] << "  "
                        << Xvector[j] <<  "  " << Xvector[0]  << "  " << l << endl; */
- 
               }
 
              for(int j=leftwaves; j< Nwaves; j++){
-                   SpectrumKays[ISpect[j]]=SpectrumKays[ISpect[j]]+KVEC[j]*knaughtlines[l];
+                   SpectrumKays[ISpect[j]]=SpectrumKays[ISpect[j]]+(KVEC[j]/alphaD)*strengthlines[l];
+
+                   if(outRef)SpectrumDeltaN[ISpect[j]]=SpectrumDeltaN[ISpect[j]]
+                           +(currentnu0-SpectrumWaves[ISpect[j]])
+                           /SpectrumWaves[ISpect[j]]/alphaL
+                           *(KVEC[j]/alphaD)*strengthlines[l]/twopi;
               } 
 
               //cout << currentnu0 << "  " << wavenumlines[l] << "  " << leftwaves << "  " << rightwaves << endl;
 
-             if(calcRef && ig==0 && k==0){  //calc only for first Iso of Water vapour
-
-
-                 //we calculate  this alpha for 1g water --- need to correct
-                           
-                 double convert_to_percm, eps;
-                 convert_to_percm=1.0/massgases[nlay][0]/SlabThick[up_to_top-1-nlay]/100.;
-                 //slab thickness in metres 
-                 //don't forget the 1/2 pi^2 outside the KK integral!
-                 convert_to_percm=convert_to_percm/2.0/pi/pi;
-
-
-                  
-                  // We use Kramers Kronig Relation
-                  // alpha=absorption coeff (per cm) per gram.
-                  // KAY is line strength per Molecule
-                  // Need to multiply K by the number of water molecules in one gramme of water 
-
- 
-                  //  the problem is that we have a variable step, and that the function 
-                  //  evaluation x values just wont be a mirror image around x=0. Interpolate!
-
-
-                  double OMEGA;
-                  int rightwaves=Nwaves-leftwaves+1;  //include centre wavelength at leftwaves-1
-
-                  double XLEFT[leftwaves]; double XRIGHT[rightwaves];
-
-                  double ALPHA_LEFT[leftwaves];   //first contains alpha(-omega^prime)
-                  double ALPHA_RIGHT[rightwaves];   //second contains alpha(omega^prime)
-
-                  double ALPHA_LEFT_spare[leftwaves];   //spare copy alpha(-omega^prime)
-                  double ALPHA_RIGHT_spare[rightwaves];   //spare copy alpha(omega^prime)
-
-                  double ALPHA_DERIV_LEFT[leftwaves]; double ALPHA_DERIV_RIGHT[rightwaves];
-                  double DeltaNleft[leftwaves];    double DeltaNright[rightwaves]; // weak susceptibility limit
-
-                  double DeltaN1=0; double DeltaN2=0; double residual;
-
-
-                  for(int kk=0; kk<leftwaves; kk++){
-                      XLEFT[kk]=-XVEC[leftwaves-1-kk];
-                      ALPHA_LEFT[kk]=KVEC[leftwaves-1-kk]*knaughtlines[l]/(AllMolW[ig][k]*nucleon); // 1 g H2O -chane down the line
-                      ALPHA_LEFT_spare[kk]=ALPHA_LEFT[kk];
-                    //  cout << kk << "   x left=" << XLEFT[kk] << "   alpha=" << ALPHA_LEFT[kk] << endl;
-                  }
-
-
-                  for(int kk=1; kk<rightwaves; kk++){
-                      XRIGHT[kk]=XVEC[leftwaves-1+kk];
-                      ALPHA_RIGHT[kk]=KVEC[leftwaves-1+kk]*knaughtlines[l]/(AllMolW[ig][k]*nucleon); //1 g H2O -chane down the line
-                      ALPHA_RIGHT_spare[kk]=ALPHA_RIGHT[kk];
-                   //   cout << kk << "  x right=" << XRIGHT[kk] << "   alpha=" << ALPHA_RIGHT[kk] << endl;
-                  }
-                  //tidy the origin if needed (can be - extremely small garbage instead of zero
-                  XLEFT[0]=0.0; XRIGHT[0]=0.0;
-
-                      //estimate ALPHA_DERIV from splines;
-                      //B-Spline over alpha -- want d alpha / d omega --set first derivatve zero at x=0;.
-                       KORDER=4; // order of spline
-                       KNOPT=1;  //option for no extrapolation outside data
-                       IBCL=1; IBCR=2;       //alpha has max at origin. natural spline
-                       FBCL=0.0; FBCR=0.0;  // derivatives must be zero --- natural spline on far left
-                       IN=leftwaves+2;
-    
-                       double TEE_ALPHA_LEFT[leftwaves+6];
-                       double BCOEF_ALPHA_LEFT[IN];
-                       double WORK_ALPHA_LEFT[5*(leftwaves+2)]; double WORK2_ALPHA_LEFT[3*KORDER];
-                       dbint4_(XLEFT,ALPHA_LEFT,&leftwaves,&IBCL,&IBCR,&FBCL,&FBCR,
-                               &KNOPT, TEE_ALPHA_LEFT, BCOEF_ALPHA_LEFT,&IN, &KORDER, WORK_ALPHA_LEFT);
-
-                       ideriv=1; inbv=1; //inbv must always be set to 1 on first call to dbvalu
-                       IN=leftwaves+2;
-                       for(int kk=0; kk < leftwaves;kk++){
-                                  ALPHA_DERIV_LEFT[kk]=dbvalu_(TEE_ALPHA_LEFT,BCOEF_ALPHA_LEFT,&IN,&KORDER
-                                 ,&ideriv, XLEFT+kk, &inbv, WORK2_ALPHA_LEFT); 
-                        }
-
-                       KORDER=4; // order of spline
-                       KNOPT=1;  //option for no extrapolation outside data
-                       IBCL=1; IBCR=2;       //alpha has max at origin. natural spline
-                       FBCL=0.0; FBCR=0.0;  // derivatives must be zero --- natural spline on far left
-                       IN=rightwaves+2;
-    
-                       double TEE_ALPHA_RIGHT[rightwaves+6];
-                       double BCOEF_ALPHA_RIGHT[IN];
-                       double WORK_ALPHA_RIGHT[5*(rightwaves+2)]; double WORK2_ALPHA_RIGHT[3*KORDER];
-                       dbint4_(XRIGHT,ALPHA_RIGHT,&rightwaves,&IBCL,&IBCR,&FBCL,&FBCR,
-                               &KNOPT, TEE_ALPHA_RIGHT, BCOEF_ALPHA_RIGHT,&IN, &KORDER, WORK_ALPHA_RIGHT);
-
-
-                       IN=rightwaves+2;
-                       ideriv=1; inbv=1; //inbv must always be set to 1 on first call to dbvalu
-                       for(int kk=0; kk < rightwaves;kk++){
-                                  ALPHA_DERIV_RIGHT[kk]=dbvalu_(TEE_ALPHA_RIGHT,BCOEF_ALPHA_RIGHT,&IN,&KORDER
-                                 ,&ideriv, XRIGHT+kk, &inbv, WORK2_ALPHA_RIGHT); 
-                        }
-
-                        //  mixing up linear, quadratic and cubic Lagrange interpolation is bad idea. 
-                        //  apart at ends. (This is what we do here)
-                        //  Copy before new changes is in Dors1Lagrange.cpp
-                        //  Alternatives
-                        //  1.  add 5, 6, 7 pt interpolation to LagrangeInt so 4,5,6,7,3,5,6,7
-                        //  2.  use 4, 5, 6, 7 point interpolation via Aitken and use 2, 3, and 4 point Gauss
-                        //  3. just step n_omega by 4 and interpolate.
-
-                        // Dors1step4.cpp has a copy of this code which  uses alternative 3.
-                        // This simplifies things a lot as far as the code is concerned 
-                       
-
-                        for(int n_omega=0; n_omega<leftwaves; n_omega+=4){  //LOOP OVER OMEGA (left)
-
-                            OMEGA=XLEFT[n_omega];
- 
-                            // We do the integral for each OMEGA via interpolation of the integrand
-                            // We have to split XLEFT and ALPHA into two parts for each integral
-                            // We have to make the limits the same on either side of the singularity
-
-
-
-                            for(int kk=0; kk< leftwaves; kk++){
-                                 if(kk ==n_omega){
-                                      ALPHA_LEFT[kk]=0.0;   //mark the divide with a zero value
-                             //         cout << kk << "  " << n_omega << "  "<<XLEFT[kk] << "   " <<  ALPHA_LEFT[kk] << endl;
-                                 }
-                                 else{
-
-                                      ALPHA_LEFT[kk]=ALPHA_LEFT_spare[kk]/(XLEFT[kk]*XLEFT[kk]-OMEGA*OMEGA);
-
-/*
-
-                                      cout << kk <<  "   " << n_omega << "  " 
-                                      <<ALPHA_LEFT[kk] << "  " 
-                                      << 1.0/(XLEFT[kk]*XLEFT[kk]-OMEGA*OMEGA)  <<"  "
-                                      <<XLEFT[kk] << "   " <<  ALPHA_LEFT_spare[kk] << endl;
-*/
-                                 }  
-                            } // end loop over omegaprime
-
-                            // now we can do the integral via interpolation
-                            // can only do Cauchy Principal value for n_omega=2 to n_omega=leftwaves-1
-
-                            // dbsqad needs at least four points if K=4 and using dbint4
-                            // smaller number of points --- use lower K and dbintk instead
-
-                            if(n_omega>1 & n_omega<leftwaves-2){
-
-
-                            bool use_dbint4Left=false, use_dbintkLeft=false
-                               , use_dbint4Right=false, use_dbintkRight=false;
-
-                            int ilagrange=4;
-
-                            // first we do the split 
-                            int n_omega1=n_omega;  int n_omega2=leftwaves-(n_omega+1);
-
-                            int isubtract=n_omega2%ilagrange;
-                            n_omega2=n_omega2-isubtract;
-
-                            double XTEMP1[n_omega1];  double XTEMP2[n_omega2];
-                            double ALPHA_TEMP1[n_omega1];  double ALPHA_TEMP2[n_omega2];
-
-
-                            DeltaN1=0; DeltaN2=0;
-  
-
-                            for(int kk=0; kk< leftwaves; kk++){
-
-                                   if(kk<n_omega){
-                                     XTEMP1[kk]=XLEFT[kk];
-                                     ALPHA_TEMP1[kk]=ALPHA_LEFT[kk];
-                            //         cout << " kk and n_omega1 " << kk << "  " << n_omega1 << endl;
-                            //           cout <<  kk <<  XTEMP1[kk] << "  " << ALPHA_TEMP1[kk] << endl;
-                                   }
-                                    if(kk>n_omega){
-                                     XTEMP2[kk-n_omega-1]=XLEFT[kk];
-                                     ALPHA_TEMP2[kk-n_omega-1]=ALPHA_LEFT[kk];
-                            //        cout << " kk-n_omega-1 and n_omega2 " << kk-n_omega-1 << "  " << n_omega2 << endl;
-                            //           cout << kk-n_omega-1 << XTEMP2[kk-n_omega-1] << "  " << ALPHA_TEMP2[kk-n_omega-1] << endl;
-                                     }
-                           } //end loop over kk
-                           double xrange1L=XTEMP1[0];   double xrange1R=XTEMP1[n_omega1-1];
-                           double xrange2L=XTEMP2[0];   double xrange2R=XTEMP2[n_omega2-1];
-
-
-                           //calculate limits
-                           double eps1, eps2;
-
-
-                           eps1=XLEFT[n_omega]-XLEFT[n_omega-1];     eps2=XLEFT[n_omega+1]-XLEFT[n_omega];
-                           if(eps1>=eps2)eps=eps1;  if(eps2>=eps1)eps=eps2;
-
-                           
-
-                           double lim1, lim2, lim3, lim4;
-                           bool inrange=false, inrange1=false, inrange2=false;
-
-                           //mostly these will be the limits - but we have a variable stepsize!
-                           lim1=XTEMP1[0]; lim2=XTEMP1[n_omega1-1];
-                           lim3=XTEMP2[0]; lim4=XTEMP2[n_omega2-1];
-                        
-                           //mostly inrange will be true, but at the very ends, a stepsize change 
-                           //might make inrange false
-                           if(fabs(eps1-eps2) >1e-10){
-                              lim2=XLEFT[n_omega]-eps;            
-                              lim3=XLEFT[n_omega]+eps;
-                              if(lim2<=xrange1R && lim2>=xrange1L)inrange1=true;
-                              if(lim3<=xrange2R && lim2>=xrange2L)inrange2=true;
-                              if(inrange1 && inrange2)inrange=true;
-                           }
-                           else{
-                              inrange=true;
-                           }
-                  
-                           if(inrange){
-
-
-                           int ilagrange=4;
-                           int chunks;
-
-                           //don't trust dbsqad any more
-                           chunks=n_omega1/ilagrange;
-
-
-                           ilagrange=4;
-                           for(int m=0; m<chunks; m++){
-                               DeltaN1=DeltaN1+LagrangeInt(XTEMP1+ilagrange*m
-                                                         , ALPHA_TEMP1+ilagrange*m, ilagrange);
-                           }
-
-
-
-                          //don't trust dbsqad any more
-                           chunks=n_omega2/ilagrange;
-
-                           DeltaN2=0;
-                           for(int m=0; m<chunks; m++){
-                               DeltaN2=DeltaN2+LagrangeInt(XTEMP2+ilagrange*m
-                                                         , ALPHA_TEMP2+ilagrange*m, ilagrange);
-                           }
-
-
-                           residual=eps/XLEFT[n_omega]*ALPHA_DERIV_LEFT[n_omega];
-
-                           DeltaN1=convert_to_percm*DeltaN1; 
-                           DeltaN2=convert_to_percm*DeltaN2;
-                           residual=convert_to_percm*residual;
-
-                           DeltaNleft[n_omega]=DeltaN1+DeltaN2+residual;
-
-              //          cout << "*********************************************************************\n";
-
-                        cout << n_omega1 << "  " << n_omega2 << "  "
-                             << XLEFT[n_omega] << "  " 
-                             << DeltaN1 << "  "
-                             << DeltaN2 << "  "
-                             <<  residual << "  "
-                             << DeltaNleft[n_omega] << endl;
-
-                           } //endif inrange
-
-                        }  //endif(n_omega>0 n_omega<leftwaves-2
-
-                        // for n_omega= origin, origin+one step, upper limit - one step, upper limit;
-                        DeltaNleft[0]=0.0; 
-                        DeltaNleft[1]=convert_to_percm*eps/XLEFT[n_omega]*ALPHA_DERIV_LEFT[n_omega]; 
-                        DeltaNleft[leftwaves-2]=convert_to_percm*eps/XLEFT[n_omega]*ALPHA_DERIV_LEFT[n_omega]; 
-                        DeltaNleft[leftwaves-1]=0.0; 
-
-
-                           
-                
-                        }  //end loop over OMEGA (left)
-              exit(0);
-
-
-
-                      
-              for(int j=0; j<leftwaves; j++){
-                   SpectrumDeltaN[ISpect[leftwaves-1-j]]=SpectrumDeltaN[ISpect[leftwaves-1-j]]
-                                                        +DeltaNleft[leftwaves-1-j];
-              }
-
-             for(int j=leftwaves; j< Nwaves; j++){
-                   SpectrumDeltaN[ISpect[j]]=SpectrumDeltaN[ISpect[j]]+DeltaNright[j-leftwaves+1];
-              } 
-
-              cout << l << "   " << nlines << endl;
-              }// endif calcRef
-
-
-
               Xvector.erase(Xvector.begin(), Xvector.end());
-              ISpect.erase(ISpect.begin(), ISpect.end());                     
+              ISpect.erase(ISpect.begin(), ISpect.end());    
+              //XVEC and KVEC go out of scope automatically- redeclared in loop                 
            }  //end for loop l<nulength over centre wavelengths
  
-
-
           if(outspec){
 
 /*****************************************************************************************
-        Output Spectra if needed
+        Output absorption cross section Spectra if needed
 ******************************************************************************************/
         // for each isotopologue output files to MolSpect directory
         // first --- the file names
@@ -1907,10 +1647,20 @@ int main(int argc, char* argv[]){
         bool firstwrite=false;
         if(nlay==0)firstwrite=true;
         string SpectFile;
+        string SpectFileT;
+        string SpectFileN;
         SpectFile=AllMols[ig];
+        SpectFileT=AllMols[ig];
+        SpectFileN=AllMols[ig];
         const string SpectDir("MolSpect");
+        const string SpectDirT("TauSpect");
+        const string SpectDirN("RefSpect");
         SpectFile.replace(0, 11, SpectDir);
+        SpectFileT.replace(0, 11, SpectDirT);
+        SpectFileN.replace(0, 11, SpectDirN);
         cout << SpectFile << endl;
+        cout << SpectFileT << endl;
+        cout << SpectFileN << endl;
         ostringstream oss_outcode; //output file has isotopologue number and  layer number
         int isorep1, isorep2;
 
@@ -1936,7 +1686,11 @@ int main(int argc, char* argv[]){
          stringsize=SpectFile.size();
          ipos=stringsize-4; //".dat" at the end
          SpectFile.insert(ipos,modstring);
+         SpectFileT.insert(ipos,modstring);
+         SpectFileN.insert(ipos,modstring);
          cout << SpectFile << "  " << nlay << "  "  << k << endl;  
+         cout << SpectFileT << "  " << nlay << "  "  << k << endl;  
+         cout << SpectFileN << "  " << nlay << "  "  << k << endl;  
 
          if(firstwrite){
            int Status=-1000;
@@ -1951,6 +1705,16 @@ int main(int argc, char* argv[]){
          firstwrite=false;
          int kountzero=0;
          int isize=SpectrumWaves.size();
+
+         // HITRAN line strength is in cm^2 per molecule
+         // we need to convert again  --- SpectrumKays now contains optical depth of each layer
+         for(int iz=0; iz < isize; iz++){
+            SpectrumKays[iz]=SpectrumKays[iz]*massgases[ig][nlay]*niceabund[ig][k]
+                             /(nucleon*AllMolW[ig][k]);
+             //massgases in g per cm^2, nucleon in grammes.
+            if(outRef)SpectrumDeltaN[iz]=SpectrumDeltaN[iz]*massgases[ig][nlay]*niceabund[ig][k]
+                             /(nucleon*AllMolW[ig][k])/(100.*SlabThick[up_to_top-1-nlay]);
+         }
 
          if(logplot){
          //strip out the zeros!
@@ -1966,31 +1730,52 @@ int main(int argc, char* argv[]){
 
 
          OutSpect.open(SpectFile.c_str(),ios::out | ios::app);
+         TauSpect.open(SpectFileT.c_str(),ios::out | ios::app);
+         if(outRef)RefSpect.open(SpectFileN.c_str(),ios::out | ios::app);
 
          if(nlay==0)OutSpect << up_to_top << endl;
+         if(nlay==0)TauSpect << up_to_top << endl;
+         if(nlay==0)RefSpect << up_to_top << endl;
 
           if(PlotIt){
             OutSpect << isize-kountzero <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
+            TauSpect << isize-kountzero <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
+            if(outRef)
+            RefSpect << isize-kountzero <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
           } 
           else{       
             OutSpect << isize-kountzero << endl;
+            TauSpect << isize-kountzero << endl;
+            if(outRef)RefSpect << isize-kountzero << endl;
           } 
 
          if(logplot){
 
             for(int i=0; i<isize; i++){
               if(SpectrumKays[i]>0){
-                  OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << log10(SpectrumKays[i]) << endl;
+                  //convert back to cm^2 per molecule for output
+                  OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
+                           << log10(SpectrumKays[i]*nucleon*AllMolW[ig][k]  ) << endl;
+                  TauSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
+                           << log10(SpectrumKays[i]) << endl;
               }  //endif  >0
              } //end for loop}
          }
          else{
 
            for(int i=0; i<isize; i++){
-              OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << SpectrumKays[i] << endl;
+              OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
+                       << SpectrumKays[i]*nucleon*AllMolW[ig][k] << endl;
+              TauSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
+                       << SpectrumKays[i] << endl;
            }
   
          }  //end for if logplot else
+         //Ref index always has negatives, no log plot
+           if(outRef){
+           for(int i=0; i<isize; i++){
+              RefSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << SpectrumDeltaN[i] << endl;
+           }}
 
 
            if(nlay==up_to_top-1){
@@ -1999,161 +1784,61 @@ int main(int argc, char* argv[]){
   
               OutSpect << 1 << "  " <<  1 << endl;
               OutSpect << "Wave@Number   @per_cm" << endl;
-              OutSpect << 1 << "  " <<  1 << endl;
-              if(logplot){
-                 OutSpect << "log10(Cross@Section)    @cm^2" << endl;}
-              else{
-                 OutSpect << "Cross@Section   @cm^2" << endl;
+              OutSpect << 1 << "  " <<  1 << endl;  //for vertical axis
+
+              TauSpect << 1 << "  " <<  1 << endl;
+              TauSpect << "Wave@Number   @per_cm" << endl;
+              TauSpect << 1 << "  " <<  0 << endl;  //for vertical axis
+
+              if(outRef){
+                RefSpect << 1 << "  " <<  1 << endl;
+                RefSpect << "Wave@Number   @per_cm" << endl;
+                RefSpect << 1 << "  " <<  0 << endl;  //for vertical axis
               }
+              if(logplot){
+                 OutSpect << "log10(Cross@Section)    @cm^2@Per@Mol" << endl;}
+              else{
+                 OutSpect << "Cross@Section   @cm^2@Per@Mol" << endl;
+              }
+              if(logplot){
+                 TauSpect << "log10(Optical@Depth)" << endl;}
+              else{
+                 TauSpect << "Optical@Depth " << endl;
+              }
+              if(outRef)RefSpect << "(n-1)" << endl;
+
                  OutSpect << "1" << endl;
+                 TauSpect << "1" << endl;
+                 if(outRef)RefSpect << "1" << endl;
 
              for(int laynumber=0; laynumber< up_to_top; laynumber++){
                 OutSpect << "Layer=@" << laynumber << endl;
+                TauSpect << "Layer=@" << laynumber << endl;
+                if(outRef)RefSpect << "Layer=@" << laynumber << endl;
              }
            
            } //endif for PlotIt}
+
          
 
            } //endif for nlay=up_to_top
 
-           OutSpect.close();    
+           OutSpect.close();  
+           TauSpect.close();    
+           RefSpect.close();   
          
          } //endif for outspec
 
-          if(outRef){
-
 /*****************************************************************************************
-        Output Spectra if needed
-******************************************************************************************/
-        // for each isotopologue output files to MolSpect directory
-        // first --- the file names
-        // current gas=ig  --- Yep we are still in the ig loop!
-        bool firstwrite=false;
-        if(nlay==0)firstwrite=true;
-        string SpectFile;
-        SpectFile=AllMols[ig];
-        const string SpectDir("RefSpect");
-        SpectFile.replace(0, 11, SpectDir);
-        cout << SpectFile << endl;
-        ostringstream oss_outcode; //output file has isotopologue number and  layer number
-        int isorep1, isorep2;
+        Work out k Distributions before releasing memory
+******************************************************************************************/    
 
-        if(k+1<10){
-           isorep1=k+1+48; //ASCII 0=48
-           oss_outcode <<  "_Iso_"  << (char)isorep1;
-          // cout << "Iso Number=" << k+1 << "  character="<<  (char)isorep1 << endl;
-        }
-
-        if(k+1>=10){
-           int i1=k+1-10,i2=(k+1)%10;
-           isorep1=i1+48;
-           isorep2=i2+48;
-           oss_outcode <<  "_Iso_"  << (char)isorep1 << (char)isorep2;
-          // cout << "Iso Number=" << k+1 << endl;
-         }
-
-         string modstring;
-         modstring=oss_outcode.str();
-         cout << modstring << endl;
-         int stringsize,ipos;
-         stringsize=SpectFile.size();
-         ipos=stringsize-4; //".dat" at the end
-         SpectFile.insert(ipos,modstring);
-         cout << SpectFile << "  " << nlay << "  "  << k << endl;  
-
-         if(firstwrite){
-           int Status=-1000;
-           struct stat FileInfo;
-           Status=stat(SpectFile.c_str(),&FileInfo);
-           //returns 0 if successfully get File Infor, -1 if it fails to find the file
-           if(Status==0){
-             cout << "File " << SpectFile << " already exists-We will not overwite it or append to it!\n";
-             exit(0);}
-          } //endif firstwrite
-
-         firstwrite=false;
-         int kountzero=0;
-         int isize=SpectrumWaves.size();
-
-         if(logplot){
-         //strip out the zeros!
-           for(int iz=0; iz < isize; iz++){
-              if(SpectrumDeltaN[iz]<=0.0)kountzero++;
-         }}
-
-         // for PlotIt        
-         int ntype=0;   //points=1   lines=0
-         int ncol=1+nlay;    //Give each line a different material colour
-         int nstyle=0;  // solid or dippled
-         int npoint=1;  //point size
-
-
-         OutSpect.open(SpectFile.c_str(),ios::out | ios::app);
-
-         if(nlay==0)OutSpect << up_to_top << endl;
-
-          if(PlotIt){
-            OutSpect << isize-kountzero <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
-          } 
-          else{       
-            OutSpect << isize-kountzero << endl;
-          } 
-
-         if(logplot){
-
-            for(int i=0; i<isize; i++){
-              if(SpectrumDeltaN[i]>0){
-                  OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << log10(SpectrumDeltaN[i]) << endl;
-              }  //endif  >0
-             } //end for loop}
-         }
-         else{
-
-           for(int i=0; i<isize; i++){
-              OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << SpectrumDeltaN[i] << endl;
-           }
-  
-         }  //end for if logplot else
-
-
-           if(nlay==up_to_top-1){
-
-            if(PlotIt){
-  
-              OutSpect << 1 << "  " <<  1 << endl;
-              OutSpect << "Wave@Number   @per_cm" << endl;
-              OutSpect << 1 << "  " <<  1 << endl;
-              if(logplot){
-                 OutSpect << "log10(Cross@Section)    @cm^2" << endl;}
-              else{
-                 OutSpect << "Cross@Section   @cm^2" << endl;
-              }
-                 OutSpect << "1" << endl;
-
-             for(int laynumber=0; laynumber< up_to_top; laynumber++){
-                OutSpect << "Layer=@" << laynumber << endl;
-             }
-           
-           } //endif for PlotIt}
-         
-
-           } //endif for nlay=up_to_top
-
-           OutSpect.close();    
-         
-         } //endif for outRef
-
-
-
-
-/*****************************************************************************************
-        Work out k Distributions
-******************************************************************************************/           
+/*****************Release Memory**********************************************************/       
            SpectrumWaves.erase(SpectrumWaves.begin(), SpectrumWaves.end());
            SpectrumKays.erase(SpectrumKays.begin(), SpectrumKays.end());                         
            SpectrumDeltaN.erase(SpectrumDeltaN.begin(), SpectrumDeltaN.end());
            CentreWaves.erase(CentreWaves.begin(), CentreWaves.end());
-           CentreLines.erase(CentreLines.begin(), CentreLines.end());
+
            }  //end loop over layers nlay
 
 
@@ -2166,15 +1851,15 @@ int main(int argc, char* argv[]){
         Clear memory
 ******************************************************************************************/
         for(int i=0;i<vecsize;i++){
-            cout << "gas humber=" << ig+1 << " Isotopologue=" << i+1 << "  code=" <<nicecode[ig][i]
+            cout << "gas number=" << ig+1 << " Isotopologue=" << i+1 << "  code=" <<nicecode[ig][i]
                  << "  number of lines=" << linecentres[i].size()<< endl;
                  linecentres[i].erase(linecentres[i].begin(), linecentres[i].end()); 
                  linestrengths[i].erase(linestrengths[i].begin(), linestrengths[i].end()); 
-                 linegammaAir[i].erase(linestrengths[i].begin(), linestrengths[i].end()); 
-                 linegammaSelf[i].erase(linestrengths[i].begin(), linestrengths[i].end());  
-                 lineLSE[i].erase(linestrengths[i].begin(), linestrengths[i].end());       
-                 lineTdep[i].erase(linestrengths[i].begin(), linestrengths[i].end());     
-                 lineShift[i].erase(linestrengths[i].begin(), linestrengths[i].end());            
+                 linegammaAir[i].erase(linegammaAir[i].begin(), linegammaAir[i].end()); 
+                 linegammaSelf[i].erase(linegammaSelf[i].begin(), linegammaAir[i].end());  
+                 lineLSE[i].erase(lineLSE[i].begin(), lineLSE[i].end());       
+                 lineTdep[i].erase(lineTdep[i].begin(), lineTdep[i].end());     
+                 lineShift[i].erase(lineShift[i].begin(), lineShift[i].end());            
             }
 
       } //end loop over HITRAN par files ig=0 to ngas
