@@ -11,7 +11,12 @@
 
 \usepackage[toc,page]{appendix}
 
+
+\usepackage{amsmath}
+
 \begin{document}
+
+\numberwithin{equation}{section}
 
 \bibliographystyle{prsty}
 
@@ -31,7 +36,7 @@ email:{\tt seagods@hotmail.com} }
 \subsection{Basics}
 
 The first thing that is required for any atmospheric radiative transfer calculation is
-an atmosphere. So much is obvious. The program that sets up
+an some representation of an atmosphere. So much is obvious. The program that sets up
 the atmosphere for doing radiative transfer calculations is {\it Dors1}. 
 
 To do any radiation calculations in our ``one dimensional" atmosphere, we 
@@ -46,9 +51,10 @@ to consult a standard textbook on radiative transfer such as by Chandrasekhar \c
 As we shall see, we will end up with a set of optical depths (and single scattering albedos) in each layer of the atmosphere,
  as well as a composite phase function.
 
-The  {\it Dors1} program is designed to build a data file representing the Earth's atmosphere under various conditions.
-The options the user has for user defined atmospheric properties mean that if the user wishes
-to build an atmosphere very different from that found on Earth, this can be done.
+The  {\it Dors1} program is designed to build a data file representing the Earth's atmosphere, including
+variations in temperature, pressure, volcanic activity, humidity, and so on.
+There is the option of creating user defined atmospheric properties, which mean that if the user wishes
+to build an atmosphere very different from that found on Earth, it can be done.
 This document's emphasis is on 
 building up a layered Earth atmosphere and its optical properties from realistic data. 
 The data used by {\it Dors1} are based on
@@ -56,13 +62,13 @@ the 1976 U. S. Standard Atmosphere \footnote[1]{All the references to the the U.
 Geophysical library are available from http://www.dtic.mil/dtic/}  \cite{USStandard:Mybib} and its supplements, especially the AFGL constituent
 profiles up to 120km \cite{ConstProfs:Mybib}.
 
-The best thing to do when first using {\it Dors1} (assuming you are in your {The-DORS} directory) is to just type ``Dors1 -v [ENTER]" at a system terminal.
+The best thing to do when first using {\it Dors1} is to just type ``Dors1 -v [ENTER]" at a system terminal.
 (Throughout this documentation we assume the reader is using a UNIX or Linux
 system and is using the command line \footnote[2]{That a command is ended with the
   ENTER or RETURN key is assumed from now on.}.)
 The { \it -v} stands for ``verbose mode". In this mode you will be prompted for all the required
 inputs. When {\it Dors1} has finished, it will write a record of what you entered 
- in the file named  {\it Dors1in.dat} (unless otherwise specified).  It isn't a bad idea to make a copy of this file to something 
+ in the file named  {\it Dors1in.dat} (unless otherwise specified).  It isn't a bad idea to make a copy of this file  named something 
 like {\it example.Dors1in.dat}.
 
 If at some later stage you wish to make a small modification to the atmosphere defined by your original input, you can 
@@ -80,7 +86,7 @@ the document will be handy to have alongside
 you when you run the program. Also, see some on-line videos which explain 
  {\it Dors1, Dors2} and {\it Dors3} \footnote[1]{Youtube video not yet done}.
 
-\subsection{Wavelengths}
+\subsection{Dors1 Input: Wavelengths}
 
 So, let's start a ``run through" of {\it Dors1} -v.
 On running {\it Dors1 -v}, the first information that you will be asked to enter concerns wavelengths.
@@ -100,21 +106,25 @@ wavelengths and zero outside this range (a ``top-hat" function). If we want to l
 range 0.6 to 0.70 micrometres, we enter the smaller wavelength ($\lambda_1)$ of 0.60 first, and the larger
 wavelength ($\lambda_2)$ of 0.70 second. 
 
-We shall need to consider absorption lines outside the wavelength regions specified, we are asked for a 
-$\Delta \lambda$ (in microns) so we will consider lines from $\lambda_1-\Delta \lambda$ to $\lambda_2$. To
-a first approximation the wave numbers will vary from $\tilde{\nu_1}(1-\Delta \lambda/\lambda_2)$
- to $\tilde{\nu_2}(1+\Delta \lambda/\lambda_1)$.
+We shall need to consider absorption lines outside the wavelength region just specified, so we are asked for a 
+$\Delta \lambda$ (in microns) and we will consider absorption lines with line centres between
+  $\lambda_1-\Delta \lambda$ and 
+$\lambda_2+\Delta \lambda$. The reason for this is that absorption lines with line centres
+ just outside our wavelength range will influence the absorption inside the wavelength range. 
+
+In spectroscopy, wave numbers (denoted $\tilde{\nu}$) are often used rather than wavelengths. The wave number
+is the number of wavelengths that fit into 1cm. For instance, if the wavelengths $\lambda_1$ and $\lambda_2$
+ are given in microns then the wave number interval ($\tilde{\nu}_1 ,\tilde{\nu}_2$) is $(10^4/\lambda_2, 10^4/\lambda_1)$. In examining the  absorption of light in the interval
+ $(\tilde{\nu}_1, \tilde{\nu}_2)$
+ we examine absorption lines with line centres in the interval ($\tilde{\nu_1}(1-\Delta \lambda/\lambda_2),
+ \tilde{\nu_2}(1+\Delta \lambda/\lambda_1)$).
 
 If, for some small range of wavelengths, there are no sharp absorption  features due
  to molecular absorption lines, we can in effect use just a single wavelength (by setting $\lambda_2=\lambda_1$).
-By small, we mean that the wavelength range is
-small enough so that the aerosol phase function, single scattering albedo, and optical depth,
- and the Rayleigh scattering optical depths do
- not change in any significant way over the wavelength region. 
+By small, we mean that the scattering properties of the atmosphere are approximately constant. 
 
-Unfortunately, whenever there are many sharp features such as molecular absorption lines over a given wavelength
+When there are many sharp molecular absorption lines over a given wavelength
 range, we cannot use a single wavelength approximation.
-This means much heavier computation.
 The {\it Dors} uses a correlated-$\kappa$ approach in this case. 
 Detailed explanations of the correlated-$\kappa$ approximation are given in \cite{GoodyWest:Mybib}, 
 \cite{LacisOinas:Mybib}, \cite{FuLiou:Mybib}, and \cite{RoseKratz:Mybib}. 
@@ -162,72 +172,70 @@ the molecular absorption lines, then the answer is no. Also, we may know in adva
  for our wavelength range or purposes --- and so needn't bother with the extra computing time reading in all the files and computing the spectra.
 
 
-For this reason the next input decides whether to calculate molecular absorption spectra or not.
-If we have made a run of {\it Dors1} already, with this value set to 1, it will have output the
-correlated-$\kappa$ data required by {\it Dors3} in a separate file. 
-We may not wish to re-do these calculations and over-write the previously
- calculated file: if so  
-we should enter zero.
-For now enter 1 as a response. If we are doing these calculations, we may want to examine the fine
+For this reason the next prompt asks whether we want to calculate the molecular absorption spectra or not.
+If we have made a run of {\it Dors1} already, and entered 1 at this prompt, it will have output the
+correlated-$\kappa$ data required by {\it Dors3} into a separate file. 
+We may not wish to re-do these calculations, and we should enter zero if this is the case.
+For now enter 1 as a response. 
+
+Since these data can
+be expensive to calculate, it is undesirable to have results accidentally overwritten.
+To prevent this $Dors1$ will refuse to overwrite pre-existing files and exit.
+You have to move or delete spectral data before you calculate a new spectrum.
+
+Whenever we calculate the molecular absorption properties, we may want to examine the fine
 detailed spectra rather than just the few $\kappa$ values needed for the correlated-$\kappa$ method.
-We are prompted as to whether we want this output or not. These are large files, and if they aren't wanted, enter zero.
+We are prompted as to whether we want these high resolution output files or not. If choose to output these fine detailed spectra.
+These data files shall be written to the {\it MolSpect} directory
+ and the $TauSpect$ directory. The $MolSpect$ directory shall contain files, for each gas, and each isotope,
+ the cross section spectrum  ($cm^2$ per molecule) for each layer. The $TauSpect$ directory contains
+the corresponding spectral data for the optical thickness of each layer. 
 
-If there are absorption lines in your wavelength intervals you might want to take a look at them and see
-if you have the right resolution in the spectrum given the cutoffs and resolutions you will choose in a moment.
-In this case you will need to choose to calculate the absorption spectra and choose to output the files.
-These data files shall be written to the {\it MolSpect} directory. Note that if you want to keep these files, you must create
-a subdirectory within {\it MolSpect} and move them there. If you have previously calculated spectra in the 
-{MolSpect} directory, {\it Dors1} will refuse to overwrite them and exit. You have to delete them
- or move them to a subdirectory (or elsewhere) before you calculate a new spectrum.
-
-You quite probably have software to plot the spectra, if not you might choose to
- get {\it PlotIt} which is one of my own graphics programs \footnote[1]{git@github.com:seagods/PlotFiles.git}.
-If you decide to use PlotIt, the files containing the spectra have to be output in a particular way
-with line colours, styles, and so on, specified in the data files.
-For this reason you are prompted as to whether or not you are using {\it PlotIt}. If not, the output file
+Next,  you are prompted as to whether or not you are using {\it PlotIt}
+  \footnote[1]{git@github.com:seagods/PlotFiles.git} (this one of the author's amatuer plot routines
+ and has its own input format). 
+ If not, the output file
 format is one line containing the number of layers, one line containing the number of points, then that line is
 followed by that number of $(x,y)$ pairs. This is followed by one line containing the number of points in the spectrum
-of the next layer and so on. There is one file for each isotopologue of each gas. You are next prompted as to whether
-or not you want to output to be the log (base 10) of the cross section as a function of wavenumber.
+of the next layer and so on. There is one file for each isotopologue of each gas. 
+
+You are next prompted as to whether
+or not you want to output to be the log (base 10) of the cross section as a function of wavenumber
+ or just the cross section as is.
 
 Now, we have included an unusual feature in {\it The-DORS} in that it has the capability  in that it
  can calculate the refractive index
 as a function of wavenumber via the Kramers-Kronig relations \cite{KronKram1:mybib}. 
 You are therefore prompted as to whether or not you want to do this, and whether or
 not you want to output the fine refractive index spectrum files in the same way as the cross-section files.
+These files will be written to the {\it RefSpect} directory.
 
 
 We mentioned already that we are using a correlated-$\kappa$ approach, and this needs a quadrature rule
 for integrating over the cumulative-$\kappa$ distribution function. We do this using Gauss quadrature, and the
 next prompt is for the order of quadrature rule. Enter 10, say.
 
-Now we are at the last part of the wavelength input. We change over to the more usual spectroscopic units
-of {\it per cm} or $cm^{-1}$. So $10^3 cm^{-1}$ corresponds to $10\mu m$ radiation, $10^4 cm^{-1}$ corresponds
-to 1$\mu m$ radiation, and so on. So, if we denote the wave number as $\tilde{\nu} (cm^{-1})$ and the wavelength as $\lambda (\mu m)$
-then $\tilde{\nu}=10^4/\lambda$. We make the trivial observation that $d \tilde{\nu}/\tilde{\nu}=-d \lambda / \lambda$.
-
+Now we are at the last part of the wavelength input. 
 The molecular absorption calculations need a ``cut-off" which tells
-the program how far away from on an absorption line centre we need to calculate the absorption profile
-of the absorption line. It also needs a spectroscopic resolution (or step size) for the wavelength interval.
-In fact we need to choose between the largest of two possible cut-off values. Each line has a Doppler and a Lorentz
+the program how far away from an absorption line centre we need to calculate the absorption profile
+of that line. It also needs a spectroscopic resolution (or step size) for the wavelength interval.
+In fact we choose the larger of two possible cut-off values. Each line has a Doppler and a Lorentz
  half width, which we denote as $\alpha_D$ and $\alpha_L$ ($cm^{-1})$. 
-If we choose a cut-off integer $\rm{i}_{CD}$ so that the cut-off for a pure Doppler line is $ \rm{i}_{CD} \alpha_D$
-then the Doppler broadened line falls off as $\exp(-[\rm{i}_{CD}]^2)$. So, 
-for $\rm{ i}_{CD}=5$, the value of the line shape at the
-cut-off is roughly 0.7\% of the value at the line centre. 
-If we choose a cut-off integer $\rm{ i}_{CL}$ so that the cut-off for a pure Lorenz line is $ \rm{i}_{CL} \alpha_L$
-then the Lorentz line falls off as $1/(1+\rm{ i}_{CL}^2$). So, for $\rm{ i}_{CL}=12$, the value of the line shape at the
-cut-off is also roughly 0.7\% of the value at the line centre. If it is required that more of the line is within
-the cut-off, then we need to increase ${\rm i}_{CL}$ more than ${\rm i}_{CD}$ since the Doppler profile falls off much more rapidly
-than the Lorentz profile. The actual value of the cut-off is to taken as whichever value of ${\rm i}_{CD} \alpha_D$
- and ${\rm i}_{CL} \alpha_{DL}$ is largest. We need another integer for the spectral resolution. When calculating the spectra
-we shall use $\Delta \nu$ as the halfwidth value divided by $istep$. These three integers
+We choose a cut-off integer $\rm{i}_{CD}$ so that the cut-off for a pure Doppler line is $ \rm{i}_{CD} \alpha_D$
+from the line centre.
+We also choose a cut-off integer $\rm{ i}_{CL}$ so that the cut-off for a pure Lorenz line is 
+$ \rm{i}_{CL} \alpha_L$. The actual value of the cut-off is to taken to be the larger of two
+cut offs. 
+
+We need another integer for the spectral resolution. When calculating the spectra
+we shall use $\Delta \nu$ as the halfwidth value divided by $istep$. These three integers, $i_{CD}, \> i_{CL}$,
+ and $istep$ 
  are prompted for when $Dors1$ is run in verbose mode. The prompts are,
-``Enter (integer) number of linewidths for cut-off for a Lorentz profile"; ``Enter (integer) number of linewidths for cut-off for a Doppler profile"; ``Enter istep (integer that sets the resolution for each line --- make it 10 or more)".
+``Enter (integer) number of linewidths for cut-off for a Lorentz profile"; ``Enter (integer) number of linewidths for cut-off for a Doppler profile"; ``Enter istep (the integer that sets the resolution for each line --- make it 5 or more)".
 
 
 
-\subsection{Layers and Aerosols}
+\subsection{Dors1 Input: Layers and Aerosols}
 
 {\it Dors1} splits up the Earth's atmosphere into four distinct regions.
 These four different regions are needed because of
@@ -1690,19 +1698,60 @@ and A.W. for Autumn/Winter.}
 \end{table}
 \end{center}
 
+\section{Rayleigh Scattering and the Refractive Index of Air}
+
+Rayleigh scattering is the regime where the size of the scatterer is much less than the radiation
+being scattered, and so it applies to the scattering of ultra violet, visible, and longer wavelength
+radiation. The scattering coefficient $\sigma$ per particle is
+\begin{equation}
+\sigma=\frac{128 \pi^5}{3 \lambda^4} \alpha_p^2,
+\end{equation}
+where $\alpha_p$ is the polarisability. There are also
+ factors that describe depolarisation \cite{Chandrasekhar:Mybib}
+ which we ignore here. Famously, the scattering coefficient follows the inverse fourth power
+of the wavelength: blue light will scatter far more red, and we have blue skies in the absense of
+cloud.
+
+The polarisability is related to the
+refractive index, that is
+\begin{equation}
+\alpha_p=\frac{n^2-1}{ 4 \pi N} \sim \frac{\Delta n}{2 \pi N}.
+\end{equation}
+Here $N$ is the number density. The difference between the refractive index and unity ($\Delta n)$ also
+depends on $N$. So, we need to know how $\Delta n$ varies with atmospheric conditions and wavelength.
+
+The early experimental results were summed up in Edl\'{e}n's formula of 1953
+\cite{Edlen1:Mybib} and are used by Penndorf \cite{PenndorfAir:Mybib} to characterise Rayleigh scattering in the
+Earth's Atmosphere. This contain's the ``old Edl\'{e}n" formula for ``standard air".
+\begin{equation}
+(n^2-1)\times 10^8=6432+\frac{2\>949\>810}{146-\lambda^{-2}}+\frac{25\>540}{41-\lambda^{-2}}.
+\end{equation}
+Here $\lambda$ is in microns.
+This early version still appears sometimes, and it gives good enough results for many purposes
+ in the region of validity $0.2 \mu m < \lambda < 1.7 \mu m$. Nonetheless, the Edl\'{e}n revised the
+formula \cite{Edlen2:Mybib} and the 1966 formulation in eqn.X is better. That is
+\begin{equation}
+(n^2-1)\times 10^8=8342.13+\frac{2\>046\>030}{130-\lambda^{-2}}+\frac{15\>997}{38.9-\lambda^{-2}}.
+\end{equation}
+Again, this is for ``standard air", by which is meant dry air at
+Adjustments are made for temperature, pressure, varying CO2, and water vapour.
+
+Ignoring the region of validity, we remark that the  1953 formula tends to 27259.9
+ as $\lambda \rightarrow \infty$,  and the 1966 formula tends to 27261.3. We do this so we can make some qualitative comments on
+this continuum variation of the refractive index of air. The
+curve falls smoothly from $\Delta n \sim 3.2 \times 10^{-4}$
+ at $\lambda=0.2 \mu m$, to $\sim 2.8 \times 10^{-4}$ at $\lambda=0.5 \mu m$. As for longer wavelenghths, $\Delta n \rightarrow \sim 2.74$. This could be thought of as representing the static dielectric constant or ``radio refractive index".
+The two terms depending on wavelength diverge for wavelengths in the region of $0.08 \mu$ and $0.16 \mu$ and can be thought of as 
+representing the tail end of the refractive index contributions of dissociation in the ultra violet and X-Ray region of the spectrum. 
+
+
+
 
 
 \newpage
 
 \bibliography{/home/daddio/Articles/Mybib}
-%\newpage
-%\vspace*{20cm}
-%\begin{figure}[htb]
-%\special{psfile=Dodec.eps vscale=50 hscale=50 voffset=10 hoffset=10}
-%\caption{ 
-%A computer perspective drawing of the dodecahedron.
-%}
-%\end{figure}
+
 
 \end{document}
 

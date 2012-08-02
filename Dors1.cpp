@@ -1866,6 +1866,8 @@ int main(int argc, char* argv[]){
 
          } //endif for calcspec
 
+       cout << "The Value of ShiftLine was " << ShiftLine << endl;
+
      //delete respval and lambdaresp - add later
 
   return 0;
