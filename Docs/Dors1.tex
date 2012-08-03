@@ -361,7 +361,7 @@ So, we have finished our first run-through of {\it Dors1 -v} and this has create
 0.500000 0.600000  0.01  0 
 1 1 1 1 1 1
 10
-5  12 10
+12  5 10
 1 40.000000 20.000000
 1 2 3 4
 2
@@ -388,9 +388,9 @@ radiative transfer.
 
 The next line ends the wavelength related inputs, and are related cutoffs in terms of the
 Lorentz and Doppler half widths at half maximum. 
-The line tells is we have a Doppler cut-off of 5 times the Doppler half width, a pressure broadening 
-cut-off of 12 times and Lorentz half width. The program selects the largest of these two cut-offs,
- and the step size shall be the whichever of the two half widths is the largest divided by 10.
+The line tells is we have a Lorentz cut-off of 12 times the Lorentz half width, a pressure broadening 
+cut-off of 5 times and Doppler half width, and a value of $istep$ equal to 10. The program selects the largest of these two cut-offs once the Doppler width and Lorentz half width have been calculated for the layer.
+ The step size shall be the whichever of the two half widths is the largest divided by $istep$ which is 10.
 For example, if the Doppler cutoff is 5$\times$ 0.2 and the Lorentz cutoff is 12*0.4. Then the program
  shall choose the  cutoff to  4.8. The step size shall be 0.4/10.
 
@@ -1698,6 +1698,107 @@ and A.W. for Autumn/Winter.}
 \end{table}
 \end{center}
 
+\section{An Overview of the Cross Section Spectra for the Gases}
+
+We include this section so that the reader can see where the main absorption features are for the gases.
+Sometimes, large absorption features obscure smaller ones. Using log plots can help, and we include a few examples.
+The horizontal axes are in wave numbers, but the captions will contain wavelenth information in microns. Be
+sure to note the scale on the vertical axis may change from figure to figure.
+
+\subsection{Water Vapour}
+
+\vspace*{11.5cm}
+\begin{figure}[htb]
+\special{psfile=H2Ospect/F1.ps vscale=64 hscale=71 hoffset=10 voffset=0}
+\caption{Water vapour absorption lines between $0.5\mu m$ and $1\mu m$ show weak absorption lines
+approaching $1\mu m$}  
+\end{figure}
+\newpage
+
+\vspace*{11.5cm}
+\begin{figure}[htb]
+\special{psfile=H2Ospect/F2.ps vscale=64 hscale=71 hoffset=10 voffset=0}
+\caption{Water vapour absorption lines between $1\mu m$ and $2\mu m$ show absorption lines
+around $1.1\mu m$, $1.4\mu m$, and $1.9 \mu m$. Note that the vertical scale has increased more than
+ tenfold from that of Fig.16}  
+\end{figure}
+\newpage
+
+\vspace*{11.5cm}
+\begin{figure}[htb]
+\special{psfile=H2Ospect/F3.ps vscale=64 hscale=71 hoffset=10 voffset=0}
+\caption{Water vapour absorption lines between $2\mu m$ and $3\mu m$ show strong absorption lines
+between $2.5\mu m$  and $2.9 \mu m$. These dwarf smaller, but important features between $2\mu m$ and
+ $2.25 \mu$.  The verical scale has increased a hundred fold from that of Fig.17}
+\end{figure}
+\newpage
+
+\vspace*{11.5cm}
+\begin{figure}[htb]
+\special{psfile=H2Ospect/F3b.ps vscale=64 hscale=71 hoffset=10 voffset=0}
+\caption{A log plot of the water vapour absorption lines between $2\mu m$ and $3\mu m$ (as in Fig.18)
+   show how``busy"
+ the water vapour spectrum is at these wavelengths, with small but significant absorption
+lines in the range  2.0$\mu m$ to  2.25$\mu m$
+ not apparent in Fig.18}    
+\end{figure}
+\newpage
+
+
+
+\vspace*{11.5cm}
+\begin{figure}[htb]
+\special{psfile=H2Ospect/F4.ps vscale=64 hscale=71 hoffset=10 voffset=0}
+\caption{Water vapour absorption lines between $3\mu m$ and $4\mu m$
+   show significant features for wavelengths below 3.45$\mu m$ (the vertical axis
+ is back down to orders of $10^{-20}$)}    
+\end{figure}
+\newpage
+
+
+\vspace*{11.5cm}
+\begin{figure}[htb]
+\special{psfile=H2Ospect/F5.ps vscale=64 hscale=71 hoffset=10 voffset=0}
+\caption{Water vapour absorption lines between $4\mu m$ and $10\mu m$
+   show  strong features from $5\mu m$ to 8$\mu m$ (the vertical axis
+ is back up to orders of $10^{-17}$). Features as strong as seen in Fig20 are seen 
+throught the interval}    
+\end{figure}
+\newpage
+\vspace*{11.5cm}
+\begin{figure}[htb]
+\special{psfile=H2Ospect/F6.ps vscale=64 hscale=71 hoffset=10 voffset=0}
+\caption{Water vapour absorption lines between $10\mu m$ and $15\mu m$
+   show  increaingly strong features from $12\mu m$ to 15$\mu m$}
+\end{figure}
+\newpage
+
+
+\vspace*{11.5cm}
+\begin{figure}[htb]
+\special{psfile=H2Ospect/F7.ps vscale=64 hscale=71 hoffset=10 voffset=0}
+\caption{Water vapour absorption lines between $15\mu m$ and $20\mu m$}
+\end{figure}
+\newpage
+
+\vspace*{11.5cm}
+\begin{figure}[htb]
+\special{psfile=H2Ospect/F8.ps vscale=64 hscale=71 hoffset=10 voffset=0}
+\caption{Water vapour absorption lines between $20\mu m$ and $100\mu m$}
+\end{figure}
+\newpage
+
+\vspace*{11.5cm}
+\begin{figure}[htb]
+\special{psfile=H2Ospect/F9.ps vscale=64 hscale=71 hoffset=10 voffset=0}
+\caption{Water vapour absorption lines between $0.1 mm$ and $1mm$, the
+strongest features occur for wavelengths below 0.2mm}
+\end{figure}
+\newpage
+
+
+
+
 \section{Rayleigh Scattering and the Refractive Index of Air}
 
 Rayleigh scattering is the regime where the size of the scatterer is much less than the radiation
@@ -1740,9 +1841,8 @@ Ignoring the region of validity, we remark that the  1953 formula tends to 27259
  as $\lambda \rightarrow \infty$,  and the 1966 formula tends to 27261.3. We do this so we can make some qualitative comments on
 this continuum variation of the refractive index of air. The
 curve falls smoothly from $\Delta n \sim 3.2 \times 10^{-4}$
- at $\lambda=0.2 \mu m$, to $\sim 2.8 \times 10^{-4}$ at $\lambda=0.5 \mu m$. As for longer wavelenghths, $\Delta n \rightarrow \sim 2.74$. This could be thought of as representing the static dielectric constant or ``radio refractive index".
-The two terms depending on wavelength diverge for wavelengths in the region of $0.08 \mu$ and $0.16 \mu$ and can be thought of as 
-representing the tail end of the refractive index contributions of dissociation in the ultra violet and X-Ray region of the spectrum. 
+ at $\lambda=0.2 \mu m$, to $\sim 2.9 \times 10^{-4}$ at 0.3$\mu m$, to f$\sim 2.8 \times 10^{-4}$ at $\lambda=0.5 \mu m$. As for longer wavelenghths, $\Delta n \rightarrow \sim 2.74$. This could be thought of as representing the static dielectric constant or ``radio refractive index".
+The two terms depending on wavelength diverge for wavelengths in the region of $0.08 \mu$ and $0.16 \mu$ and can be thought of as representing the tail end of the refractive index contributions of dissociation in the ultra violet and X-Ray continuum region of the spectrum. No wavelengths smaller than 200$nm$ should be used.
 
 
 

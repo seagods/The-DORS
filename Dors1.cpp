@@ -86,9 +86,7 @@ int main(int argc, char* argv[]){
 
   bool verbose;   //verbose mode for input, read from file if false;
   //verbose output bools
-  bool verbose_out=true;  // output loads of info to standard output
-  bool verbose_height=true;   //output height integration info to std::out
-  bool verbose_spect=false;   // output spectrum details to std out
+
 /**************************************************************************************
    Stage 1:  declare and define various data to define the atmosphere
              read response function, read atmospheric definitions
@@ -110,11 +108,7 @@ int main(int argc, char* argv[]){
    Stage 4:  4A: Loop over Hitran par files, read in line centres.
              4B: Work out where to calculate the spectrum.
              4C: calculate the spectrum.
-****************************************************************************************/
-
-   double ShiftLine=0.0;
-   // Make 1.0 or 1.0 depending on whether we bother with line shifts
-
+***************************************************************************************
 
 /************************   BEGIN STAGE 1  *********************************************/
   // Four Aerosol layers, each to be split into nsplit slabs
@@ -122,7 +116,7 @@ int main(int argc, char* argv[]){
   int nsplit1,nsplit2,nsplit3,nsplit4;    
   // boundary layer visibility , troposphere visiblility, wavelength1, wavelength2
   double visb, vist, lambda1, lambda2, lambdacut;
-  bool rfun=true;  //true if we are using myresp.dat or myrespX.dat as a response function file
+  bool rfun;  //true if we are using myresp.dat or myrespX.dat as a response function file
   bool vis;  //true if entered as visibility, false if entered as optical depth.
   // default atmosphere 1-6 or user defined
   int iatm;    //atmosphere ID
@@ -230,7 +224,19 @@ int main(int argc, char* argv[]){
         cout << "Wavelengths used are " << lambda1 << " and " << lambda2 << endl;
     }
 
+/*   NAUGHTY STUFF   --- Hacks to do one off stuff and/or over-ride Questioner */
 
+     bool verbose_out=true;  // output loads of info to standard output
+     bool verbose_height=true;   //output height integration info to std::out
+     bool verbose_spect=false;   // output spectrum details to std out
+
+     bool  ShiftLine=0;  //switch pressure dependent line shifts on and off
+                         // Make 1 or 0 depending on whether we bother with line shifts
+     bool LayerChange=true;  // We will pratt about with layers
+     int NLStart=9,NLStop=10;  // eg start=9, stop=10 1 layer
+
+     int nicemax=1;  // max number of isotopes considered --- should go to questioner!
+     bool LEGEND=false;
 
    // Use Gauss quadrature routine in toms library
 
@@ -406,7 +412,7 @@ int main(int argc, char* argv[]){
    //Many of these are very small indeed and may be ignored for most purposes
    //we introduce a cutoff, so if nicemax=1 only the most common is isotopologue
    //and so on. CO2 has the most isotopolgues, equal to ten.
-   int nicemax=2;
+
    
    int nicecode[50][10];  //HITRAN isotope code for molecule
    double AllMolW[50][10]; //molecular weights for isotopologue
@@ -1167,6 +1173,7 @@ int main(int argc, char* argv[]){
           nu=0.0;
           iss[2] >> setprecision(11) >> nu;
           if(nu > nu1X && nu < nu2X){
+     //     cout << nu << " nu  " << nu1X << "  " << nu2X << endl;
           if(verbose_spect)cout << line << endl;
           entry[0]=line.substr(0,2); 
           entry[3]=line.substr(15,10); entry[4]=line.substr(25,10); entry[5]=line.substr(35,5);
@@ -1310,8 +1317,17 @@ int main(int argc, char* argv[]){
 
         bd_tips_2003_(ig_fort, RefTemp, k_fort, Refgee_i, QT);
         ofstream OutSpect; ofstream RefSpect; ofstream TauSpect;
+
+        if(!LayerChange){
+           NLStart=0;
+           NLStop=up_to_top;
+        }
+        if(NLStart <0 || NLStop>up_to_top){
+             cout << "Layers Wrong" << endl; exit(1);
+         }
+    
         //FOR EACH LAYER
-        for(int nlay=0; nlay < up_to_top; nlay++){
+        for(int nlay=NLStart; nlay < NLStop; nlay++){
             TempNlay=AvTemp[nlay];
             PressNlay=AvPress[nlay];
           //BD_TIPS_2003 Routine provided by HITRAN.
@@ -1325,20 +1341,25 @@ int main(int argc, char* argv[]){
             double alphaDop[nlines];
             double widthlines[nlines];
  
-            
-
             //First we find all the wave numbers at which to calculate
             //the entire spectrum over nu1X to nu2X and stuff them in SpectrumWaves;
             int kountwaves=0;  //wavelengths which are line centres
             for(int l=0; l<nlines;l++){
               if(QT>0){
               wavenumlines[l]=linecentres[k][l];
-              //This is a half width -- dont want it
-//              alphaDop[l]=(wavenumlines[l]-ShiftLine*lineShift[k][l]*AvPress[nlay]/RefPress)
+              //This is a half width -- dont want it                
+//              alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress)
 //                          /Speedlight*sqrt(2.0*Boltz*TempNlay*log2/(AllMolW[ig][k]*nucleon));
                //Want 1/e width =half width divided by sqrt(log(2))
-               alphaDop[l]=(wavenumlines[l]-ShiftLine*lineShift[k][l]*AvPress[nlay]/RefPress)
+
+               if(ShiftLine){
+               alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress)
+                          /Speedlight*sqrt(2.0*Boltz*TempNlay/(AllMolW[ig][k]*nucleon));}
+               else{
+               alphaDop[l]=wavenumlines[l]
                           /Speedlight*sqrt(2.0*Boltz*TempNlay/(AllMolW[ig][k]*nucleon));
+               }
+ 
               // HITRAN 96 Appendix A. "Hitran Parameters: Definitions and Usage"
               // Ref Paper, HITRAN 96 eqn.A.11 + defn gamma_air (not included self broadening yet)
               alphaLorentzA[l]=linegammaAir[k][l]*AvPress[nlay]/RefPress*pow(RefTemp/TempNlay,lineTdep[k][l]);
@@ -1393,7 +1414,13 @@ int main(int argc, char* argv[]){
                  if(icurrent<nlines){
                     nextnu0=wavenumlines[icurrent+1];
                  }
-                 currentnu0=currentnu0-ShiftLine*lineShift[k][icurrent]*AvPress[nlay]/RefPress;
+
+                 if(ShiftLine){
+                 currentnu0=currentnu0-lineShift[k][icurrent]*AvPress[nlay]/RefPress;}
+                 else{
+                 currentnu0=currentnu0;}
+
+
                  //set current width
                  currentwidthD=alphaDop[icurrent]*icutD;
                  currentwidthL=alphaLorentzA[icurrent]*icutL;
@@ -1423,8 +1450,10 @@ int main(int argc, char* argv[]){
 
                    //skipline is mostly still false, but occasionally nextnu0 is same
                    //as currentnu0  --- but occasionally skipline will be reset to true
-              
-              currentnu0=currentnu0-ShiftLine*ShiftLine*lineShift[k][icurrent]*AvPress[nlay]/RefPress;
+              if(ShiftLine){
+                 currentnu0=currentnu0-lineShift[k][icurrent]*AvPress[nlay]/RefPress;
+              }
+
               //set current width
               currentwidthD=alphaDop[icurrent]*icutD;
               currentwidthL=alphaLorentzA[icurrent]*icutL;
@@ -1526,6 +1555,7 @@ int main(int argc, char* argv[]){
 
 
            int templength=SpectrumWaves.size();
+
            double myzero=0.0;
            for(int l=0; l<templength-1; l++){
               SpectrumKays.push_back(myzero);
@@ -1540,7 +1570,12 @@ int main(int argc, char* argv[]){
 
            
            for(int l=0; l<nulength-1; l++){
-              currentnu0=wavenumlines[l]-ShiftLine*lineShift[k][l]*AvPress[nlay]/RefPress;
+          
+              if(ShiftLine){
+              currentnu0=wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress;}
+              else{
+              currentnu0=wavenumlines[l];}
+            
               width=widthlines[l];   //cutoff from previous loop
               alphaD=alphaDop[l];
               alphaL=alphaLorentzA[l];
@@ -1645,13 +1680,16 @@ int main(int argc, char* argv[]){
         // first --- the file names
         // current gas=ig  --- Yep we are still in the ig loop!
         bool firstwrite=false;
-        if(nlay==0)firstwrite=true;
+        if(nlay==NLStart)firstwrite=true;
         string SpectFile;
         string SpectFileT;
         string SpectFileN;
-        SpectFile=AllMols[ig];
-        SpectFileT=AllMols[ig];
-        SpectFileN=AllMols[ig];
+        SpectFile=AllMols[gases[ig]-1];
+        SpectFileT=AllMols[gases[ig]-1];
+        SpectFileN=AllMols[gases[ig]-1];
+      //  cout << AllMols[0] << "  " << AllMols[1] <<  "  " << AllMols[2]  << "  ig=  " << ig 
+      //  << " gases ig= " << gases[ig] << endl;
+     //   cout << SpectFile << endl; exit(0);
         const string SpectDir("MolSpect");
         const string SpectDirT("TauSpect");
         const string SpectDirN("RefSpect");
@@ -1724,7 +1762,7 @@ int main(int argc, char* argv[]){
 
          // for PlotIt        
          int ntype=0;   //points=1   lines=0
-         int ncol=1+nlay;    //Give each line a different material colour
+         int ncol=1+nlay-NLStart;    //Give each line a different material colour
          int nstyle=0;  // solid or dippled
          int npoint=1;  //point size
 
@@ -1733,9 +1771,17 @@ int main(int argc, char* argv[]){
          TauSpect.open(SpectFileT.c_str(),ios::out | ios::app);
          if(outRef)RefSpect.open(SpectFileN.c_str(),ios::out | ios::app);
 
+         if(!LayerChange){
          if(nlay==0)OutSpect << up_to_top << endl;
          if(nlay==0)TauSpect << up_to_top << endl;
          if(nlay==0)RefSpect << up_to_top << endl;
+         }
+         else{
+         if(nlay==NLStart)OutSpect << NLStop-NLStart << endl;
+         if(nlay==NLStart)TauSpect << NLStop-NLStart << endl;
+         if(nlay==NLStart)RefSpect << NLStop-NLStart << endl;
+         }
+
 
           if(PlotIt){
             OutSpect << isize-kountzero <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
@@ -1778,7 +1824,7 @@ int main(int argc, char* argv[]){
            }}
 
 
-           if(nlay==up_to_top-1){
+           if(nlay==NLStop-1){
 
             if(PlotIt){
   
@@ -1807,6 +1853,7 @@ int main(int argc, char* argv[]){
               }
               if(outRef)RefSpect << "(n-1)" << endl;
 
+               if(LEGEND){
                  OutSpect << "1" << endl;
                  TauSpect << "1" << endl;
                  if(outRef)RefSpect << "1" << endl;
@@ -1815,6 +1862,10 @@ int main(int argc, char* argv[]){
                 OutSpect << "Layer=@" << laynumber << endl;
                 TauSpect << "Layer=@" << laynumber << endl;
                 if(outRef)RefSpect << "Layer=@" << laynumber << endl;
+             }} else {
+                 OutSpect << "0" << endl;
+                 TauSpect << "0" << endl;
+                 if(outRef)RefSpect << "0" << endl;
              }
            
            } //endif for PlotIt}
@@ -1856,7 +1907,7 @@ int main(int argc, char* argv[]){
                  linecentres[i].erase(linecentres[i].begin(), linecentres[i].end()); 
                  linestrengths[i].erase(linestrengths[i].begin(), linestrengths[i].end()); 
                  linegammaAir[i].erase(linegammaAir[i].begin(), linegammaAir[i].end()); 
-                 linegammaSelf[i].erase(linegammaSelf[i].begin(), linegammaAir[i].end());  
+                 linegammaSelf[i].erase(linegammaSelf[i].begin(), linegammaSelf[i].end());  
                  lineLSE[i].erase(lineLSE[i].begin(), lineLSE[i].end());       
                  lineTdep[i].erase(lineTdep[i].begin(), lineTdep[i].end());     
                  lineShift[i].erase(lineShift[i].begin(), lineShift[i].end());            
