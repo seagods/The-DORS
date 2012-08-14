@@ -33,6 +33,7 @@
 #include <string>   // nice string operations
 #include <vector>   // a bit like a souped up stack
 #include <sys/stat.h>  //POSIX stuff including file queries
+#include <new>   // use nothrow
 using namespace std;
 
 // fortran programs, use nm (name mangle) on object files and .so files
@@ -214,7 +215,9 @@ int main(int argc, char* argv[]){
        fp_in.open(RespFile, ios::in);
        if(!fp_in.is_open()){ cerr << "Failed to open file (" << RespFile << ")"  << endl; exit(1); }
        fp_in >> nresp;
-        lambda_resp=new double[nresp]; respval=new double[nresp];
+        lambda_resp=new (nothrow) double[nresp]; respval=new (nothrow) double[nresp];
+        if(lambda_resp==0){cout << "memory for lambda_resp failed\n" << endl; exit(10);}
+        if(respval==0){cout << "memory for respval failed\n" << endl; exit(10);}
         for(int i=0; i< nresp ; i++){
          fp_in >> lambda_resp[i] >> respval[i];
         }
@@ -333,15 +336,21 @@ int main(int argc, char* argv[]){
    int gid[50];      //HITRAN gas numbers (last few are dummies)
    bool gmask[50];   //if false, ignore that gas
    fp_in.open("GasMask.dat", ios::in);
+
+   for(int klu=0; klu<20; klu++){
+      gid[klu]=-7; gmask[klu]=true;
+    }
+
    if(!fp_in.is_open()){ cout << "Failed to open file (GasMask.dat)" << endl;  exit(1);}
-   fp_in >> gid[0] >> gid[1] >> gid[2] >> gid[3] >> gid[4] >>
-            gid[5] >> gid[6] >> gid[7] >> gid[8] >> gid[9];
-   fp_in >> gmask[0] >> gmask[1] >> gmask[2] >> gmask[3] >> gmask[4] >>
-            gmask[5] >> gmask[6] >> gmask[7] >> gmask[8] >> gmask[9];
-   fp_in >> gid[10] >> gid[11] >> gid[12] >> gid[13] >> gid[14] >>
-            gid[15] >> gid[16] >> gid[17] >> gid[18] >> gid[19];
-   fp_in >> gmask[10] >> gmask[11] >> gmask[12] >> gmask[13] >> gmask[14] >>
-            gmask[15] >> gmask[16] >> gmask[17] >> gmask[18] >> gmask[19];
+
+   fp_in >> gid[0] >> gid[1] >> gid[2] >> gid[3] >> gid[4] 
+         >> gid[5] >> gid[6] >> gid[7] >> gid[8] >> gid[9];
+   fp_in >> gmask[0] >> gmask[1] >> gmask[2] >> gmask[3] >> gmask[4] 
+         >> gmask[5] >> gmask[6] >> gmask[7] >> gmask[8] >> gmask[9];
+   fp_in >> gid[10] >> gid[11] >> gid[12] >> gid[13] >> gid[14] 
+         >> gid[15] >> gid[16] >> gid[17] >> gid[18] >> gid[19];
+   fp_in >> gmask[10] >> gmask[11] >> gmask[12] >> gmask[13] >> gmask[14] 
+         >> gmask[15] >> gmask[16] >> gmask[17] >> gmask[18] >> gmask[19];
    fp_in >> gid[20] >> gid[21] >> gid[22] >> gid[23] >> gid[24] >>
             gid[25] >> gid[26] >> gid[27] >> gid[28] >> gid[29];
    fp_in >> gmask[20] >> gmask[21] >> gmask[22] >> gmask[23] >> gmask[24] >>
@@ -355,6 +364,7 @@ int main(int argc, char* argv[]){
    fp_in >> gmask[40] >> gmask[41] >> gmask[42] >> gmask[43] >> gmask[44] >>
             gmask[45] >> gmask[46] >> gmask[47] >> gmask[48] >> gmask[49];
    fp_in.close();
+
    const char* AllMols[50];   //File names for reading gas number density profiles
    if(iatm==1)AllMols[0]="Atmospheres/Mols1_H2O.dat";if(iatm==2)AllMols[0]="Atmospheres/Mols2_H2O.dat";
    if(iatm==3)AllMols[0]="Atmospheres/Mols3_H2O.dat";if(iatm==4)AllMols[0]="Atmospheres/Mols4_H2O.dat";
@@ -1102,8 +1112,6 @@ int main(int argc, char* argv[]){
       else{singlewave==true;} 
 
       int n_waves;  // number of wave numbers for fine detail spectrum
-      double* wavearray;  // array for fine detail wave numbers
-      
       
       string  PARFILE="HITRAN/   hit08.par";
       double lambda;   // a wavelength
@@ -1123,7 +1131,9 @@ int main(int argc, char* argv[]){
         PARFILE.replace(7,3,replacewith.str());
         cout <<"PARFILE=" << PARFILE << endl;
         fp_in.open(PARFILE.c_str(),ios::in);
-        if(!fp_in.is_open()){cout <<" can't open HITRAN file \n";
+        if(!fp_in.is_open()){
+                             cout << ig << "  ngas=" << ngas <<endl;
+                             cout <<" can't open HITRAN file \n";
                              cout << PARFILE.c_str() << endl;  exit(1);}
         int vecsize=nice[ig];
         if(vecsize>nicemax)vecsize=nicemax;
@@ -1300,7 +1310,7 @@ int main(int argc, char* argv[]){
         //FOR EACH ISO
        for(int k=0; k<vecsize; k++){   //loop over isotopologues
 
-        int ig_fort=ig+1;  //gas and isotopoluge for BD_TIPS_2003.f
+        int ig_fort=ig+1;  //gas and isotopologue for BD_TIPS_2003.f
         int k_fort=k+1;
 
         int nlines=linecentres[k].size();
@@ -1325,28 +1335,59 @@ int main(int argc, char* argv[]){
         if(NLStart <0 || NLStop>up_to_top){
              cout << "Layers Wrong" << endl; exit(1);
          }
+
+
     
         //FOR EACH LAYER
         for(int nlay=NLStart; nlay < NLStop; nlay++){
+
             TempNlay=AvTemp[nlay];
             PressNlay=AvPress[nlay];
+
+
           //BD_TIPS_2003 Routine provided by HITRAN.
 
             bd_tips_2003_(ig_fort, TempNlay, k_fort, gee_i, QT);
            // cout << "gi=" << gee_i << "  QT=" << QT <<  endl;
- 
-            double wavenumlines[nlines];    // temporary copies
-            double strengthlines[nlines];
-            double alphaLorentzA[nlines];  //for air -add partial self and partial pressures later;
-            double alphaDop[nlines];
-            double widthlines[nlines];
+
+           //get seg faults if declared on stack
+
+            double* wavenumlines; double* strengthlines; double* alphaLorentzA;
+            double* alphaDop; double* widthlines;
+
+        //     cout << "about to declare wave\n"; 
+            wavenumlines=new (nothrow) double[nlines];    // temporary copies
+        //     cout << "about to declare strength\n";
+            strengthlines=new (nothrow) double[nlines];
+       //      cout << "about to declare Lor\n";
+            alphaLorentzA=new(nothrow) double[nlines];  //for air -add partial self and partial pressures later;
+       //      cout << "about to declare Dop\n";
+            alphaDop=new (nothrow)  double[nlines];
+      //       cout << "about to declare widthlines\n";
+            widthlines=new (nothrow) double[nlines];
+      //       cout << " Done! \n";
+            if(wavenumlines==0){cout << "memory failed for wavenumlines\n"; exit(10);}
+            if(strengthlines==0){cout << "memory failed for strengthlines\n"; exit(10);}
+            if(alphaLorentzA==0){cout << "memory failed for alphaLorentz\n"; exit(10);}
+            if(alphaDop==0){cout << "memory failed for alphaDop\n"; exit(10);}
+            if(widthlines==0){cout << "memory failed for widthlines\n"; exit(10);}
+
+
+
  
             //First we find all the wave numbers at which to calculate
             //the entire spectrum over nu1X to nu2X and stuff them in SpectrumWaves;
             int kountwaves=0;  //wavelengths which are line centres
+
             for(int l=0; l<nlines;l++){
               if(QT>0){
+
+
+  //            cout <<  "  k and l " << k << "  " << l << endl; 
+
               wavenumlines[l]=linecentres[k][l];
+
+           //   cout << "new centre at " << linecentres[k][l] <<  "  k and l " << k << "  " << l << endl; 
               //This is a half width -- dont want it                
 //              alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress)
 //                          /Speedlight*sqrt(2.0*Boltz*TempNlay*log2/(AllMolW[ig][k]*nucleon));
@@ -1375,6 +1416,8 @@ int main(int argc, char* argv[]){
               //now we have the x and y vectors for all the lines
             }  //end loop over nlines
 
+             // cout << "ARSE!\n"; exit(0);
+ 
 /*******************************BEGIN STAGE 4B PROPER - WORK OUT SPECTRUMWAVES **********************/
             vector<double> SpectrumWaves; 
             vector<double>SpectrumKays;  //extinction
@@ -1488,11 +1531,14 @@ int main(int argc, char* argv[]){
                    CentreWaves.push_back(kountwaves);
                    kountwaves++;}
               else{
+                   if(SpectrumWaves.size()>0){
                    SpectrumWaves.pop_back();
                    kountwaves--;
                    SpectrumWaves.push_back(currentnu0);
                    CentreWaves.push_back(kountwaves);
-                   kountwaves++;}
+                   kountwaves++;
+                   } //endif 
+                   }
 
 
               bool double_last_line=false;
@@ -1549,6 +1595,8 @@ int main(int argc, char* argv[]){
                icurrent++;
               } //end of if else for skipline
            } //end of while icurrent << nlines
+
+
 
 /*******************************END STAGE 4B  -- WE HAVE SPECTRUMWAVES ***************/
 /*******************************BEGIN STAGE 4C  KAYWAVES *****************************/    
@@ -1670,6 +1718,13 @@ int main(int argc, char* argv[]){
               ISpect.erase(ISpect.begin(), ISpect.end());    
               //XVEC and KVEC go out of scope automatically- redeclared in loop                 
            }  //end for loop l<nulength over centre wavelengths
+
+
+            delete[] wavenumlines;
+            delete[] strengthlines;
+            delete[] alphaLorentzA;
+            delete[] alphaDop;
+            delete[] widthlines;
  
           if(outspec){
 
@@ -1919,7 +1974,8 @@ int main(int argc, char* argv[]){
 
        cout << "The Value of ShiftLine was " << ShiftLine << endl;
 
-     //delete respval and lambdaresp - add later
+
+     delete[] lambda_resp; delete[] respval;
 
   return 0;
 }
