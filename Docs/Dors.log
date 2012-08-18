@@ -1,7 +1,7 @@
-This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6) (format=latex 2011.12.29)  19 JUL 2012 13:44
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6) (format=latex 2011.12.29)  17 AUG 2012 18:55
 entering extended mode
  %&-line parsing enabled.
-**Dors.tex
+**Dors
 (./Dors.tex
 LaTeX2e <2005/12/01>
 Babel <v3.8h> and hyphenation patterns for english, usenglishmax, dumylang, noh
@@ -61,12 +61,12 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 ] [2] [3] [4]
 (./Dors.bbl [5]) [6] (./Dors.aux) ) 
 Here is how much of TeX's memory you used:
- 255 strings out of 256217
- 2720 string characters out of 1917094
- 51804 words of memory out of 1500000
- 3612 multiletter control sequences out of 10000+200000
+ 256 strings out of 256217
+ 2728 string characters out of 1917094
+ 52804 words of memory out of 1500000
+ 3613 multiletter control sequences out of 10000+200000
  9880 words of font info for 35 fonts, out of 1200000 for 2000
  645 hyphenation exceptions out of 8191
- 24i,8n,19p,401b,230s stack positions out of 5000i,500n,6000p,200000b,15000s
+ 24i,8n,19p,397b,230s stack positions out of 5000i,500n,6000p,200000b,15000s
 
-Output written on Dors.dvi (6 pages, 19012 bytes).
+Output written on Dors.dvi (6 pages, 21224 bytes).

@@ -238,7 +238,7 @@ int main(int argc, char* argv[]){
      bool LayerChange=true;  // We will pratt about with layers
      int NLStart=9,NLStop=10;  // eg start=9, stop=10 1 layer
 
-     int nicemax=1;  // max number of isotopes considered --- should go to questioner!
+     int nicemax=1;  // max number of isotopes considered --- should go to Questioner!
      bool LEGEND=false;
 
    // Use Gauss quadrature routine in toms library
@@ -337,9 +337,6 @@ int main(int argc, char* argv[]){
    bool gmask[50];   //if false, ignore that gas
    fp_in.open("GasMask.dat", ios::in);
 
-   for(int klu=0; klu<20; klu++){
-      gid[klu]=-7; gmask[klu]=true;
-    }
 
    if(!fp_in.is_open()){ cout << "Failed to open file (GasMask.dat)" << endl;  exit(1);}
 
@@ -469,6 +466,8 @@ int main(int argc, char* argv[]){
    const char* MolFiles[ngas];      //A copy of AllMols, but only containing the gases actually taken into account
    double MWGAS[ngas];              //The MEAN molecular weight of each gas, taking into account the
                                     // isotopologues and abundances
+
+   double PartPress=0;
 
    ngas=0;     //reset to zero now declarations have been made
    for(int i=0;i<50;i++){
@@ -1120,10 +1119,17 @@ int main(int argc, char* argv[]){
       string entry[19];
       istringstream iss[19]; //19 input stringstreams
       
-      //FOR EACH GAS
-      for(int ig=0; ig<ngas; ig++){ //loop to read from HITRAN files.
+      // FOR EACH GAS
+      // Note igx is NOT the HITRAN gas number
+      // gases[igx] IS the HITRAN molecule number
+      // more confusion, Hitran numbers start at 1, C numbers start at zero
+      // hence int molecule and int molek
+
+      for(int igx=0; igx<ngas; igx++){ //loop to read from HITRAN files.
         
-        int molecule=gases[ig];
+        int molecule=gases[igx];
+        int molek=molecule-1;
+
         int ireplace1=molecule/10; int  ireplace2=molecule%10;
         ireplace1=ireplace1+48; ireplace2=ireplace2+48; //ascci '0' is 48
         ostringstream replacewith;
@@ -1132,10 +1138,10 @@ int main(int argc, char* argv[]){
         cout <<"PARFILE=" << PARFILE << endl;
         fp_in.open(PARFILE.c_str(),ios::in);
         if(!fp_in.is_open()){
-                             cout << ig << "  ngas=" << ngas <<endl;
+                             cout << igx << "  ngas=" << ngas <<endl;
                              cout <<" can't open HITRAN file \n";
                              cout << PARFILE.c_str() << endl;  exit(1);}
-        int vecsize=nice[ig];
+        int vecsize=nice[molek];
         if(vecsize>nicemax)vecsize=nicemax;
       
         // for picking out max line strength for each Isotopologue
@@ -1147,7 +1153,7 @@ int main(int argc, char* argv[]){
            ikount[i]=-1;
            str_max[i]=-1.0;
         }
-        //vectors for each isotopologue, vecsize <=nicemax depending on nice[ig]
+        //vectors for each isotopologue, vecsize <=nicemax depending on nice[molek]
         vector<double> linecentres[vecsize];
         vector<double> linestrengths[vecsize];
         vector<double> linegammaAir[vecsize];     // air broadening
@@ -1165,6 +1171,15 @@ int main(int argc, char* argv[]){
             lineTdep[k].clear();    
             lineShift[k].clear();            
          }
+       // We assume we are using cross section files and NOT line by line
+       // HITRAN .par files for gases 30,35, and 42
+       // Ozone has both a .par file and a cross section file
+        bool UseParFile=true;
+        if( (molecule==30) || (molecule==35) || (molecule==42) )UseParFile=false;
+
+
+        if(UseParFile){
+
 
         // Loop that reads in HITRAN data
         while(!getline(fp_in, line).eof()){  // get the line "line" --- what a jazzy name!
@@ -1182,8 +1197,8 @@ int main(int argc, char* argv[]){
           // width of field includes the decimal point -hence setprecision with 11.
           nu=0.0;
           iss[2] >> setprecision(11) >> nu;
-          if(nu > nu1X && nu < nu2X){
-     //     cout << nu << " nu  " << nu1X << "  " << nu2X << endl;
+
+          if(nu > nu1X && nu < nu2X){  // if nu is in range
           if(verbose_spect)cout << line << endl;
           entry[0]=line.substr(0,2); 
           entry[3]=line.substr(15,10); entry[4]=line.substr(25,10); entry[5]=line.substr(35,5);
@@ -1290,7 +1305,7 @@ int main(int argc, char* argv[]){
           iss[0].clear();iss[5].clear();iss[6].clear();iss[7].clear();iss[8].clear();iss[9].clear();
           iss[10].clear();iss[11].clear();iss[12].clear();iss[13].clear();iss[14].clear();iss[15].clear();
           iss[16].clear();iss[17].clear();iss[18].clear();
-          }  //endif for lambda within range
+          }  //endif for lambda within range (nu>nu1X nu < nu2X)
           iss[2].clear();
           } //endif for isotope less than nicemax
           iss[1].clear();
@@ -1301,16 +1316,66 @@ int main(int argc, char* argv[]){
         //At last we have the line centres for this particular gas.
 
         cout << "Finished with PARFILE=" << PARFILE << endl;
-        
+
+        } //endif for UseParFile
+
+
+        cout <<" gid=" << molecule << "  gmask= " << gmask[molek] << endl;
+             cout <<"nu1="  << nu1 << " nu2=" << nu2 <<endl;
+
+//**************************** Now for X section files  *****************************************************/
+
+
+        if(molecule==3){
+          //Read in X-section for UV Ozone if wavelength range requires it
+          //wn range 29164-40798
+          double startX=29164.0; double stopX=40798.0;
+          double hello=-1.0; double goodbye=-1.0;
+
+          if(nu1 <= startX  && nu2 > startX){
+               hello=startX;
+               if(nu2 < stopX)goodbye=nu2; 
+                         else goodbye=stopX; }
+          if(nu1 > startX  && nu2 > startX){
+               hello=nu1;
+               if(nu2 < stopX)goodbye=nu2; 
+                         else goodbye=stopX; }
+          if(hello>0.0 && goodbye > 0.0){
+             cout <<"startX=" << startX << "  stopX=" << stopX <<endl;
+             cout <<"hello="  << hello << " goodbye=" << goodbye <<endl;
+             cout <<"nu1="  << nu1 << " nu2=" << nu2 <<endl;
+             exit(0);
+          }
+
+          }
+
+
+        if(molecule==30){
+          //Read in X-section for IR Sulphur Hexaflouride (SF6) if wavelength range requires it
+          //wn range 925-955
+        }
+        if(molecule==35){
+          //Read in X-section for IR Chlorine Nitrate (ClONO2) if wavelength range requires it
+          //wn ranges 750-830, 1260-1320, 1680-1790
+
+        }
+
+        if(molecule==42){
+          //Read in X-section for IR Carbon Tetraflouride (CF4) if wavelength range requires it
+          //wn range 1250-1290
+
+        }
 /*******************************END STAGE 4A *****************************************/
 
 /*******************************BEGIN STAGE 4B ***************************************/
 /************************ 4B BEGINS INSIDE LOOP INSIDE  LOOP ****************************/
 /********************     FOR EACH ISO -- FOR EACH LAYER            *****************/
+       if(UseParFile){
+
         //FOR EACH ISO
        for(int k=0; k<vecsize; k++){   //loop over isotopologues
 
-        int ig_fort=ig+1;  //gas and isotopologue for BD_TIPS_2003.f
+        //gas and isotopologue for BD_TIPS_2003.f
         int k_fort=k+1;
 
         int nlines=linecentres[k].size();
@@ -1325,7 +1390,7 @@ int main(int argc, char* argv[]){
          //The line strengths are for a reference temperature of 296K
          //BD_TIPS_2003 Routine provided by HITRAN.
 
-        bd_tips_2003_(ig_fort, RefTemp, k_fort, Refgee_i, QT);
+        bd_tips_2003_(molecule, RefTemp, k_fort, Refgee_i, QT);
         ofstream OutSpect; ofstream RefSpect; ofstream TauSpect;
 
         if(!LayerChange){
@@ -1347,7 +1412,7 @@ int main(int argc, char* argv[]){
 
           //BD_TIPS_2003 Routine provided by HITRAN.
 
-            bd_tips_2003_(ig_fort, TempNlay, k_fort, gee_i, QT);
+            bd_tips_2003_(molecule, TempNlay, k_fort, gee_i, QT);
            // cout << "gi=" << gee_i << "  QT=" << QT <<  endl;
 
            //get seg faults if declared on stack
@@ -1390,22 +1455,37 @@ int main(int argc, char* argv[]){
            //   cout << "new centre at " << linecentres[k][l] <<  "  k and l " << k << "  " << l << endl; 
               //This is a half width -- dont want it                
 //              alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress)
-//                          /Speedlight*sqrt(2.0*Boltz*TempNlay*log2/(AllMolW[ig][k]*nucleon));
+//                          /Speedlight*sqrt(2.0*Boltz*TempNlay*log2/(AllMolW[molek][k]*nucleon));
                //Want 1/e width =half width divided by sqrt(log(2))
 
                if(ShiftLine){
                alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress)
-                          /Speedlight*sqrt(2.0*Boltz*TempNlay/(AllMolW[ig][k]*nucleon));}
+                          /Speedlight*sqrt(2.0*Boltz*TempNlay/(AllMolW[molek][k]*nucleon));}
                else{
                alphaDop[l]=wavenumlines[l]
-                          /Speedlight*sqrt(2.0*Boltz*TempNlay/(AllMolW[ig][k]*nucleon));
+                          /Speedlight*sqrt(2.0*Boltz*TempNlay/(AllMolW[molek][k]*nucleon));
                }
  
               // HITRAN 96 Appendix A. "Hitran Parameters: Definitions and Usage"
-              // Ref Paper, HITRAN 96 eqn.A.11 + defn gamma_air (not included self broadening yet)
-              alphaLorentzA[l]=linegammaAir[k][l]*AvPress[nlay]/RefPress*pow(RefTemp/TempNlay,lineTdep[k][l]);
+              // Ref Paper, HITRAN 96 eqn.A.11 and A.12
+              // Partial Pressure
+              //
+              //    ARSE!
+              //
+              //  We assume there is only air broadening for k>0
+              if(k==0){
+                 PartPress=massgases[nlay][igx]/massgas[nlay]*MWA/AllMolW[molek][k];
+                 alphaLorentzA[l]=AvPress[nlay]/RefPress*(
+                 linegammaAir[k][l]*(1.0-PartPress)+linegammaSelf[k][l]*PartPress
+                   )*pow(RefTemp/TempNlay,lineTdep[k][l]);
+               }
+               else{
+                 alphaLorentzA[l]=linegammaAir[k][l]*AvPress[nlay]/RefPress
+                                *pow(RefTemp/TempNlay,lineTdep[k][l]);
+               }
+
               // Ref Paper HITRAN 96 eqn A.10
-              strengthlines[l]=linestrengths[k][l]*QTref[ig][k]/QT
+              strengthlines[l]=linestrengths[k][l]*QTref[molek][k]/QT
                       *exp(-C2*lineLSE[k][l]/TempNlay)/exp(-C2*lineLSE[k][l]/RefTemp)
                       *( 1.0-exp(-C2*linecentres[k][l]/TempNlay) )*( 1.0-exp(-C2*linecentres[k][l]/RefTemp) );
               }
@@ -1416,7 +1496,6 @@ int main(int argc, char* argv[]){
               //now we have the x and y vectors for all the lines
             }  //end loop over nlines
 
-             // cout << "ARSE!\n"; exit(0);
  
 /*******************************BEGIN STAGE 4B PROPER - WORK OUT SPECTRUMWAVES **********************/
             vector<double> SpectrumWaves; 
@@ -1733,17 +1812,17 @@ int main(int argc, char* argv[]){
 ******************************************************************************************/
         // for each isotopologue output files to MolSpect directory
         // first --- the file names
-        // current gas=ig  --- Yep we are still in the ig loop!
+        // current gas=gases[igx]  --- Yep we are still in the igx loop!
         bool firstwrite=false;
         if(nlay==NLStart)firstwrite=true;
         string SpectFile;
         string SpectFileT;
         string SpectFileN;
-        SpectFile=AllMols[gases[ig]-1];
-        SpectFileT=AllMols[gases[ig]-1];
-        SpectFileN=AllMols[gases[ig]-1];
-      //  cout << AllMols[0] << "  " << AllMols[1] <<  "  " << AllMols[2]  << "  ig=  " << ig 
-      //  << " gases ig= " << gases[ig] << endl;
+        SpectFile=AllMols[molek];
+        SpectFileT=AllMols[molek];
+        SpectFileN=AllMols[molek];
+      //  cout << AllMols[0] << "  " << AllMols[1] <<  "  " << AllMols[2]  << "  molecule=  " << molecule 
+      //  << " gases ig= " << gases[igx] << endl;
      //   cout << SpectFile << endl; exit(0);
         const string SpectDir("MolSpect");
         const string SpectDirT("TauSpect");
@@ -1802,11 +1881,11 @@ int main(int argc, char* argv[]){
          // HITRAN line strength is in cm^2 per molecule
          // we need to convert again  --- SpectrumKays now contains optical depth of each layer
          for(int iz=0; iz < isize; iz++){
-            SpectrumKays[iz]=SpectrumKays[iz]*massgases[ig][nlay]*niceabund[ig][k]
-                             /(nucleon*AllMolW[ig][k]);
+            SpectrumKays[iz]=SpectrumKays[iz]*massgases[igx][nlay]*niceabund[molek][k]
+                             /(nucleon*AllMolW[molek][k]);
              //massgases in g per cm^2, nucleon in grammes.
-            if(outRef)SpectrumDeltaN[iz]=SpectrumDeltaN[iz]*massgases[ig][nlay]*niceabund[ig][k]
-                             /(nucleon*AllMolW[ig][k])/(100.*SlabThick[up_to_top-1-nlay]);
+            if(outRef)SpectrumDeltaN[iz]=SpectrumDeltaN[iz]*massgases[igx][nlay]*niceabund[molek][k]
+                             /(nucleon*AllMolW[molek][k])/(100.*SlabThick[up_to_top-1-nlay]);
          }
 
          if(logplot){
@@ -1856,7 +1935,7 @@ int main(int argc, char* argv[]){
               if(SpectrumKays[i]>0){
                   //convert back to cm^2 per molecule for output
                   OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
-                           << log10(SpectrumKays[i]*nucleon*AllMolW[ig][k]  ) << endl;
+                           << log10(SpectrumKays[i]*nucleon*AllMolW[molek][k]  ) << endl;
                   TauSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
                            << log10(SpectrumKays[i]) << endl;
               }  //endif  >0
@@ -1866,7 +1945,7 @@ int main(int argc, char* argv[]){
 
            for(int i=0; i<isize; i++){
               OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
-                       << SpectrumKays[i]*nucleon*AllMolW[ig][k] << endl;
+                       << SpectrumKays[i]*nucleon*AllMolW[molek][k] << endl;
               TauSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
                        << SpectrumKays[i] << endl;
            }
@@ -1957,7 +2036,7 @@ int main(int argc, char* argv[]){
         Clear memory
 ******************************************************************************************/
         for(int i=0;i<vecsize;i++){
-            cout << "gas number=" << ig+1 << " Isotopologue=" << i+1 << "  code=" <<nicecode[ig][i]
+            cout << "gas number=" << molecule << " Isotopologue=" << i+1 << "  code=" <<nicecode[molek][i]
                  << "  number of lines=" << linecentres[i].size()<< endl;
                  linecentres[i].erase(linecentres[i].begin(), linecentres[i].end()); 
                  linestrengths[i].erase(linestrengths[i].begin(), linestrengths[i].end()); 
@@ -1968,7 +2047,11 @@ int main(int argc, char* argv[]){
                  lineShift[i].erase(lineShift[i].begin(), lineShift[i].end());            
             }
 
-      } //end loop over HITRAN par files ig=0 to ngas
+          } // endif for UseParFile
+
+      } //end loop over HITRAN par files igx=0 to ngas
+
+
 
          } //endif for calcspec
 
