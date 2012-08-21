@@ -1,7 +1,7 @@
-This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6) (format=latex 2011.12.29)  17 AUG 2012 18:55
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6) (format=latex 2011.12.29)  21 AUG 2012 19:11
 entering extended mode
  %&-line parsing enabled.
-**Dors
+**Dors.tex
 (./Dors.tex
 LaTeX2e <2005/12/01>
 Babel <v3.8h> and hyphenation patterns for english, usenglishmax, dumylang, noh
@@ -58,8 +58,19 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <5> on input line 64.
  [1
 
-] [2] [3] [4]
-(./Dors.bbl [5]) [6] (./Dors.aux) ) 
+] [2] [3]
+Overfull \hbox (41.91673pt too wide) in paragraph at lines 160--168
+\OT1/cmr/m/it/12 IR[]XSect \OT1/cmr/m/n/12 di-rec-to-ries, put these cross sec-
+tion files in your cor-re-spond-ing \OT1/cmr/m/it/12 The-DORS/HITRAN/UV[]X
+ []
+
+
+Overfull \hbox (34.81137pt too wide) in paragraph at lines 160--168
+\OT1/cmr/m/it/12 TRAN/UV[]X/LBL \OT1/cmr/m/n/12 di-rec-tory. Also, down-load th
+e files in the \OT1/cmr/m/it/12 HI-TRAN2008/IR[]XSect/Supplement
+ []
+
+[4] [5] (./Dors.bbl) [6] (./Dors.aux) ) 
 Here is how much of TeX's memory you used:
  256 strings out of 256217
  2728 string characters out of 1917094
@@ -67,6 +78,6 @@ Here is how much of TeX's memory you used:
  3613 multiletter control sequences out of 10000+200000
  9880 words of font info for 35 fonts, out of 1200000 for 2000
  645 hyphenation exceptions out of 8191
- 24i,8n,19p,397b,230s stack positions out of 5000i,500n,6000p,200000b,15000s
+ 24i,8n,19p,403b,239s stack positions out of 5000i,500n,6000p,200000b,15000s
 
-Output written on Dors.dvi (6 pages, 21224 bytes).
+Output written on Dors.dvi (6 pages, 22048 bytes).

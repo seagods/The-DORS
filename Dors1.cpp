@@ -241,6 +241,10 @@ int main(int argc, char* argv[]){
      int nicemax=1;  // max number of isotopes considered --- should go to Questioner!
      bool LEGEND=false;
 
+     vector<double> OzWavesHH; vector<double> OZXHH[6];  //Huggins and Hartley Ozone bands, 6 spectra
+     vector<double> OzWavesChap; vector<double> OZXChap[6];  //Huggins and Hartley Ozone bands, 6 spectra
+     bool ozhh=false; bool ozchap=false;
+
    // Use Gauss quadrature routine in toms library
 
  
@@ -1177,9 +1181,7 @@ int main(int argc, char* argv[]){
         bool UseParFile=true;
         if( (molecule==30) || (molecule==35) || (molecule==42) )UseParFile=false;
 
-
         if(UseParFile){
-
 
         // Loop that reads in HITRAN data
         while(!getline(fp_in, line).eof()){  // get the line "line" --- what a jazzy name!
@@ -1340,6 +1342,69 @@ int main(int argc, char* argv[]){
                hello=nu1;
                if(nu2 < stopX)goodbye=nu2; 
                          else goodbye=stopX; }
+
+          if(hello>0){
+
+          ozhh=true;
+
+          if(goodbye<0){cout << "Ozone UV gone wrong\n"; exit(0);}
+
+          fp_in.open("HITRAN/UV_X/O3-UV04.xsc", ios::in);
+
+          if(!fp_in.is_open()){ cerr << "Failed to open file O3-UV04,xsc"  << endl; exit(1); }
+
+
+
+          //OK - We know the data format
+          string ozdata;  // We have 6 temperatures for the ozone Hartley and Huggins spectra
+          string entry;
+          istringstream input_ozo;
+
+          double OzoX;
+
+
+          for(int ioz=0; ioz<6; ioz++){
+             getline(fp_in,ozdata);   // 6 headers
+             cout << ozdata << endl;
+             double OzW1=startX;
+             for(int id=0; id<581; id++){
+                getline(fp_in,ozdata);
+
+                for(int idat=0; idat<10; idat++){  //581 lines have 10 data entries
+                  entry=ozdata.substr(idat*10+1,9);
+                  input_ozo.str(entry);
+                  input_ozo >> OzoX;  input_ozo.clear();
+                  if(hello <= OzW1 && OzW1<=goodbye){
+                     if(ioz==0)OzWavesHH.push_back(OzW1);
+                     OZXHH[ioz].push_back(OzoX);                     
+                  }
+                  OzW1+=2.0;
+                } //end idat loop
+             }  //  have read in 581 lines of 10 entries
+
+
+               getline(fp_in,ozdata);  // last line is only 8 numbers
+               for(int idat=0; idat<8; idat++){  //581 lines have 10 data entries
+                  entry=ozdata.substr(idat*10+1,9);
+                  input_ozo.str(entry);
+                  input_ozo >> OzoX;  input_ozo.clear();
+                  if(hello <= OzW1 && OzW1<=goodbye){
+                     if(ioz==0)OzWavesHH.push_back(OzW1);
+                     OZXHH[ioz].push_back(OzoX);                     
+                  }
+                  OzW1+=2.0;
+                } //end idat loop for last line of 8
+                
+          }  // end 6 ioz temperatures loop
+       
+          cout << "Size of Ozwaves=" << OzWavesHH.size() << endl;
+          for(int ioz=0; ioz<6; ioz++){
+          cout << "Size of OZXHH=" << OZXHH[ioz].size() << endl; }
+
+          } // endif hello>0
+
+
+
           if(hello>0.0 && goodbye > 0.0){
              cout <<"startX=" << startX << "  stopX=" << stopX <<endl;
              cout <<"hello="  << hello << " goodbye=" << goodbye <<endl;
@@ -1347,7 +1412,7 @@ int main(int argc, char* argv[]){
              exit(0);
           }
 
-          }
+          } // endif molecule=3
 
 
         if(molecule==30){
@@ -2056,7 +2121,12 @@ int main(int argc, char* argv[]){
          } //endif for calcspec
 
        cout << "The Value of ShiftLine was " << ShiftLine << endl;
-
+     if(ozhh){
+          OzWavesHH.erase( OzWavesHH.begin(), OzWavesHH.end() );
+          for(int ioz=0; ioz <6; ioz++){
+             OZXHH[ioz].erase( OZXHH[ioz].begin(), OZXHH[ioz].end() );
+          }
+     }
 
      delete[] lambda_resp; delete[] respval;
 

@@ -153,10 +153,21 @@ also called ``HITRAN2008", go there, and then to ``By-Molecule", download the pd
 go to ``Compressed-files". Download everything here, put them in your ``HITRAN" directory and
 unzip them. You now have a lot of files with names like ``01-hit08.par". That is the archive file
 for molecule 1 in {\it HITRAN 2008}. Two files have an extra ``\_f53"
-in the names. Just edit this out of the file names. 
+in the names. Just edit this out of the file names. There are also  line by line files
+ for gases 30, 35, and 42. These are contained in the {\it HITRAN2008/Supplemental} directory
+and are to go in your ``HITRAN/Supplement\_par" directory.
 
-There is more data to download
- via ftp from the {\it UV} and {\it IR\_XSect} directories, put these in your {\it The-DORS/HITRAN/UV\_X} and {\it The-DORS/HITRAN/IR\_X} directories. The {\it HITRAN} site does not
+There is yet more data to download
+ via ftp from the {HITRAN} ftp or web-site's  {\it UV} and {\it IR\_XSect} directories, put these
+ cross section files in your corresponding {\it The-DORS/HITRAN/UV\_X} and {\it The-DORS/HITRAN/IR\_X} directories. 
+There are extra files to download apart from these.
+When you are in the {\it HITRAN2008/UV} download the line by line files for {\it HITRAN} gases 7 and 13
+from the ``Line-by-Line" subdirectory,
+ and put them in your {\it HITRAN/UV\_X/LBL} directory. Also, download the files in the 
+{\it HITRAN2008/IR\_XSect/Supplement} directory and put them in your {\it HITRAN/IR\_X/Sup} sub-directory.
+
+
+The {\it HITRAN} site does not
  (directly) give you the data needed for the Ozone Chappuis
 bands. If you are on the {\it HITRAN} web page at
  ``http:/www.cfa/harvard.edu/hitran/", you will notice that
@@ -169,10 +180,8 @@ which starts ``Home", ``Molecule", ``Energy Levels", and so on.
 You can see a link to ``Cross-Sections" here: you shall also note the user agreement. Set the ``Representation of WN/WL" box to
 wave number, and then check the box for 12048.1928 to 51282.0513 per centimetre. Now, click on ``Show", and click on ``Download". You should
 receive a file called ``smpo.86.129.18.131.0.06859900\_1345224924.cs.gz" 
-(or something like that).
-Uncompress this, rename the inflated file SMPO.cs, and move it to the
- {\it The-DORS/HITRAN/UV\_X} directory. That's it for the data.
- 
+(or something like that). Download and uncompress all five files, and rename them ``SMPO1.cs" to "SMP5.ps".
+Put these in your {\it HITRAN/UV\_X/SMPO} directory.
 
 After all this data, there are some FORTRAN programs to download. These compute the
 partition functions needed to calculate absorption lines.
