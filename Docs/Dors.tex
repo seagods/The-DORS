@@ -181,7 +181,10 @@ You can see a link to ``Cross-Sections" here: you shall also note the user agree
 wave number, and then check the box for 12048.1928 to 51282.0513 per centimetre. Now, click on ``Show", and click on ``Download". You should
 receive a file called ``smpo.86.129.18.131.0.06859900\_1345224924.cs.gz" 
 (or something like that). Download and uncompress all five files, and rename them ``SMPO1.cs" to "SMP5.ps".
-Put these in your {\it HITRAN/UV\_X/SMPO} directory.
+Put these in your {\it HITRAN/UV\_X/SMPO} directory. {\it the following is important for the Chappuis bands}: The first line in each ``SMPOX.cs" file contains the temperature for which the data represent,
+ make sure that you name the ``SMPO" files in temperature order, so that ``SMPO1.cs" represents
+the lowest temperature and ``SMPO5,cs" represents the highest. There should be five cross section
+files in total, and note that the spectral range changes from file to file.
 
 After all this data, there are some FORTRAN programs to download. These compute the
 partition functions needed to calculate absorption lines.

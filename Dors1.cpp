@@ -241,9 +241,36 @@ int main(int argc, char* argv[]){
      int nicemax=1;  // max number of isotopes considered --- should go to Questioner!
      bool LEGEND=false;
 
-     vector<double> OzWavesHH; vector<double> OZXHH[6];  //Huggins and Hartley Ozone bands, 6 spectra
-     vector<double> OzWavesChap; vector<double> OZXChap[6];  //Huggins and Hartley Ozone bands, 6 spectra
+     int ichap=5;  // 5 temperature files for Chappuis
+
+     int iozHH=6;  // 5 temperature sets for Ozone HH
+
+     int iHHdata=581; //581 data points in ozone HH files
+
+     double startXHH=29164.0; double stopXHH=40798.0;
+     //roughly 343nm-245nm
+
+     double HHTemp[6]; //Temperatures for Ozone HH Bands
+     HHTemp[0]=200.0; HHTemp[1]=220.0; HHTemp[2]=240.0; HHTemp[3]=260.0;
+     HHTemp[4]=280.0; HHTemp[5]=300.0;
+
+
+     double ChapTemp[5]; //Temperatures for Chappuis Bands
+     ChapTemp[0]=218.0; ChapTemp[1]=228.0; ChapTemp[2]=243.0; ChapTemp[3]=273.0;
+     ChapTemp[4]=295.0;
+
+     double startXChap[5];  //Lowest wave number in each Chappuis file
+     startXChap[0]=15384.379; startXChap[1]=19230.399; startXChap[2]=19267.451; 
+     startXChap[3]=19230.399; startXChap[4]=12048.193; 
+
+     vector<double> OzWavesHH; vector<double> OzXHH[6];  //Huggins and Hartley Ozone bands, 6 spectra
+     vector<double> OzWavesChap[5]; vector<double> OzXChap[5];  //Huggins and Hartley Ozone bands, 6 spectra
      bool ozhh=false; bool ozchap=false;
+
+     int HHlines=851;
+     int ChapLines[5]; //number of lines in file - 2 (first 2 not data)
+     ChapLines[0]=45552; ChapLines[1]=32552; ChapLines[2]=32452;
+     ChapLines[3]=22052; ChapLines[4]=63501;
 
    // Use Gauss quadrature routine in toms library
 
@@ -1329,23 +1356,26 @@ int main(int argc, char* argv[]){
 
 
         if(molecule==3){
-          //Read in X-section for UV Ozone if wavelength range requires it
-          //wn range 29164-40798
-          double startX=29164.0; double stopX=40798.0;
+
           double hello=-1.0; double goodbye=-1.0;
 
-          if(nu1 <= startX  && nu2 > startX){
-               hello=startX;
-               if(nu2 < stopX)goodbye=nu2; 
-                         else goodbye=stopX; }
-          if(nu1 > startX  && nu2 > startX){
+//         startXHH=29164.0 (343nm) and stopXHH=40798.0 (245nm) 
+
+
+          if(nu1 <= startXHH  && nu2 > startXHH){
+               hello=startXHH;
+               ozhh=true;
+               if(nu2 < stopXHH)goodbye=nu2; 
+                         else goodbye=stopXHH; }
+          if(nu1 > startXHH  && nu1 < stopXHH){
                hello=nu1;
-               if(nu2 < stopX)goodbye=nu2; 
-                         else goodbye=stopX; }
+               ozhh=true;
+               if(nu2 < stopXHH)goodbye=nu2; 
+                         else goodbye=stopXHH; }
 
-          if(hello>0){
+          if(ozhh){
 
-          ozhh=true;
+
 
           if(goodbye<0){cout << "Ozone UV gone wrong\n"; exit(0);}
 
@@ -1363,11 +1393,12 @@ int main(int argc, char* argv[]){
           double OzoX;
 
 
-          for(int ioz=0; ioz<6; ioz++){
+          for(int ioz=0; ioz<iozHH; ioz++){
              getline(fp_in,ozdata);   // 6 headers
              cout << ozdata << endl;
-             double OzW1=startX;
-             for(int id=0; id<581; id++){
+             double OzW1=startXHH;
+
+             for(int id=0; id<iHHdata; id++){
                 getline(fp_in,ozdata);
 
                 for(int idat=0; idat<10; idat++){  //581 lines have 10 data entries
@@ -1376,7 +1407,7 @@ int main(int argc, char* argv[]){
                   input_ozo >> OzoX;  input_ozo.clear();
                   if(hello <= OzW1 && OzW1<=goodbye){
                      if(ioz==0)OzWavesHH.push_back(OzW1);
-                     OZXHH[ioz].push_back(OzoX);                     
+                     OzXHH[ioz].push_back(OzoX);                     
                   }
                   OzW1+=2.0;
                 } //end idat loop
@@ -1390,27 +1421,115 @@ int main(int argc, char* argv[]){
                   input_ozo >> OzoX;  input_ozo.clear();
                   if(hello <= OzW1 && OzW1<=goodbye){
                      if(ioz==0)OzWavesHH.push_back(OzW1);
-                     OZXHH[ioz].push_back(OzoX);                     
+                     OzXHH[ioz].push_back(OzoX);                     
                   }
                   OzW1+=2.0;
                 } //end idat loop for last line of 8
                 
           }  // end 6 ioz temperatures loop
-       
-          cout << "Size of Ozwaves=" << OzWavesHH.size() << endl;
-          for(int ioz=0; ioz<6; ioz++){
-          cout << "Size of OZXHH=" << OZXHH[ioz].size() << endl; }
-
-          } // endif hello>0
 
 
+          fp_in.close();
 
-          if(hello>0.0 && goodbye > 0.0){
-             cout <<"startX=" << startX << "  stopX=" << stopX <<endl;
+          } // endif ozhh true
+
+
+
+
+
+         // Chappuis Bands!
+         double stopXChap=startXHH; //Use the HITRAN data for high wavenumbers where possible
+
+
+/*   startXChap already declared and initiated as
+
+     startXChap[0]=15384.379; startXChap[1]=19230.399; startXChap[2]=19267.451; 
+     startXChap[3]=19230.399; startXChap[4]=12048.193; 
+
+     corresponding (roughly) to 650nm, 520nm, 519nm, 520nm,  and 830nm
+*/ 
+
+         double hellochap[ichap]; double goodbyechap=-1.0;
+
+         hellochap[0]=-1.0; hellochap[1]=-1.0; hellochap[2]=-1.0;
+         hellochap[3]=-1.0; hellochap[4]=-1.0;
+         
+         for(int ic=0; ic< ichap; ic++){
+          if(nu1 <= startXChap[ic]  && nu2 > startXChap[ic]){
+               hellochap[ic]=startXChap[ic];
+               ozchap=true;
+               if(nu2 < stopXChap)goodbyechap=nu2; 
+                         else goodbyechap=stopXChap; }
+          if(nu1 > startXChap[ic]  && nu1 < stopXChap){
+               hellochap[ic]=nu1;
+               ozchap=true;
+               if(nu2 < stopXChap)goodbyechap=nu2; 
+                         else goodbyechap=stopXChap; }
+         }
+
+         if(ozchap){
+
+
+         string  ChapFile[5];
+         ChapFile[0]="HITRAN/UV_X/SMPO/SMPO1.cs"; ChapFile[1]="HITRAN/UV_X/SMPO/SMPO2.cs";
+         ChapFile[2]="HITRAN/UV_X/SMPO/SMPO3.cs"; ChapFile[3]="HITRAN/UV_X/SMPO/SMPO4.cs";       
+         ChapFile[4]="HITRAN/UV_X/SMPO/SMPO5.cs"; 
+
+         string chapline;
+         double wavechap, xchap;
+         
+
+         for(int ifile=0; ifile<ichap;ifile++){
+            fp_in.open(ChapFile[ifile].c_str(), ios::in);
+
+            if(!fp_in.is_open()){ cerr << "Failed to open file Chappuis file " 
+                                       << ifile << endl; exit(1); }
+            getline(fp_in,chapline);
+            cout << chapline << endl;
+            getline(fp_in,chapline);
+            cout << chapline << endl;
+
+            for(int id=0; id< ChapLines[ifile]; id++){
+               fp_in >> wavechap >> xchap;  
+               if( (hellochap[ifile] <= wavechap) && wavechap <=goodbyechap){
+                      OzWavesChap[ifile].push_back(wavechap);
+                      OzXChap[ifile].push_back(xchap);
+               } //endif for in range
+            } // end read in data file  
+
+
+            fp_in.close();
+          }  //end ifile < ichap loop
+          }  //endif ozchap
+
+
+
+          if(ozhh){
+             cout <<"Molecule=3 OZONE HH\n";
+             cout <<"startXHH=" << startXHH << "  stopXHH=" << stopXHH <<endl;
              cout <<"hello="  << hello << " goodbye=" << goodbye <<endl;
              cout <<"nu1="  << nu1 << " nu2=" << nu2 <<endl;
-             exit(0);
+       
+            cout << "Size of Ozwaves=" << OzWavesHH.size() << endl;
+            for(int ioz=0; ioz<iozHH; ioz++){
+              cout << "Size of OzXHH=" << OzXHH[ioz].size() << endl; }
           }
+
+          if(ozchap){
+             cout <<"Molecule=3 OZONE Chap\n";
+             for(int ic=0; ic< ichap; ic++){
+             cout <<"startXChap=" << startXChap[ic] << "  stopXChap=" << stopXChap <<endl;
+             cout <<"hellochap="  << hellochap[ic] << " goodbyechap=" << goodbyechap <<endl;
+             }
+             cout <<"nu1="  << nu1 << " nu2=" << nu2 <<endl;
+      
+            for(int ic=0; ic<5; ic++){
+              cout << "Size of OzWChap OzXChap=" << OzWavesChap[ic].size() 
+                       << "  " << OzXChap[ic].size() << endl; }
+      
+          }
+
+          exit(0);
 
           } // endif molecule=3
 
@@ -2123,10 +2242,18 @@ int main(int argc, char* argv[]){
        cout << "The Value of ShiftLine was " << ShiftLine << endl;
      if(ozhh){
           OzWavesHH.erase( OzWavesHH.begin(), OzWavesHH.end() );
-          for(int ioz=0; ioz <6; ioz++){
-             OZXHH[ioz].erase( OZXHH[ioz].begin(), OZXHH[ioz].end() );
+          for(int ioz=0; ioz <iozHH; ioz++){
+             OzXHH[ioz].erase( OzXHH[ioz].begin(), OzXHH[ioz].end() );
           }
      }
+     if(ozchap){
+
+          for(int ioz=0; ioz < ichap; ioz++){
+             OzWavesChap[ioz].erase( OzWavesChap[ioz].begin(), OzWavesChap[ioz].end() );
+             OzXChap[ioz].erase( OzXChap[ioz].begin(), OzXChap[ioz].end() );
+          }
+     }
+
 
      delete[] lambda_resp; delete[] respval;
 
