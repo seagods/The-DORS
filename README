@@ -1,7 +1,15 @@
-So far this is highly incomplete garbage: Dont bother with it 
-until I change this notice!
+I have been too ill to do anything much  for ages, however, I am managing
+a bit for the moment and pushing ahead with Dors1, albeit painfully slowly.
 
-The documentation in the Docs directory should be read in the following
-order.
+So far, we have just basic thermodynamics splitting the atmosphere into
+layers, gas concentration profiles, and reading in the HITRAN
+par files. At the moment I am in the process of adding some continuum
+absorption.
 
-Dors.pdf, Dors1.pdf, Dors2.pdf, and Dors3.pdf.
+There isn't enough yet to be of interest to anyone, but the calculations
+on the atmospheric data might be of some interest to someone, so use
+latex on Dors1.tex and Dors.tex to get some readable idea of where I am
+so far...
+
+
+
