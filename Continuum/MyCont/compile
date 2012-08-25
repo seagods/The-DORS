@@ -1,0 +1,5 @@
+g++ -g -c CallDriver.cpp
+gfortran -g -c driver.f
+g++ -g -o  Cont CallDriver.o driver.o -lgfortran
+rm *.o
+
