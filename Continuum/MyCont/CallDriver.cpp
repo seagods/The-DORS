@@ -40,7 +40,7 @@ int main(){
 //     Temperature in Kelvin
       Temp=303.0;
 //     Path Lengh in cm
-      Xpath=5.0;
+      Xpath=1.0;
 
       R=8.314472;
       AV=6.0221415e23;             //Avogadro's number;
@@ -48,7 +48,7 @@ int main(){
 //     1 bar = 10^5 Pascals
 
        double moles_per_vol;
-       moles_per_vol=Press*1.0e2/R/Temp;
+       moles_per_vol=Press*1.0e2/R/Temp;  //*100 -> Pascals
 
        double Mols;
        Mols=moles_per_vol*AV;
@@ -72,12 +72,18 @@ int main(){
       if(NumPts>5040){"Number of Points too large in Continuum \n"; exit(1);}
 
 //     WaterMix=Volume mixing ratio of H2O
-       WaterMix=0.01;
-       double WaterMols=WaterMix*Mols*1e-6;
+       WaterMix=0.0217;
+       double WaterMols=WaterMix*Mols*1e-6; //(ppm)
        cout << "Number of Water Molecules per CC=" <<WaterMols << endl;
        double WaterMolSquare;
        // number of molecules per cm^2 in path length Xpath
        WaterMolSquare=WaterMols*Xpath;
+
+       //Output of Driver (KNTH2O) proportional to Xpath
+       //Output to file divided by WaterMols (so is per molecule)
+       //and Xpath -- so Xpath always 1cm!
+
+       //Daft, but did it just to check KNTH2O really was propto XPath
 
 
 //     in ppmv
