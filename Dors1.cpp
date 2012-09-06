@@ -1643,6 +1643,7 @@ int main(int argc, char* argv[]){
 
               wavenumlines[l]=linecentres[k][l];
 
+
            //   cout << "new centre at " << linecentres[k][l] <<  "  k and l " << k << "  " << l << endl; 
               //This is a half width -- dont want it                
 //              alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*PressNlay/RefPress)
@@ -1690,6 +1691,9 @@ int main(int argc, char* argv[]){
               strengthlines[l]=linestrengths[k][l]*QTref[molek][k]/QT
                       *exp(-C2*lineLSE[k][l]/TempNlay)/exp(-C2*lineLSE[k][l]/RefTemp)
                       *( 1.0-exp(-C2*linecentres[k][l]/TempNlay) )*( 1.0-exp(-C2*linecentres[k][l]/RefTemp) );
+
+
+            //    cout << strengthlines[l] << "=strength\n";  //compare with JavaHAWKS sometime!
               }
               else{
                  cout << "Error: BD_TIPS_2003 returned QT=" << QT << endl;
@@ -2092,18 +2096,21 @@ int main(int argc, char* argv[]){
 
          int isize2;
 
+         double molspercm2, molspercm3;
+
+         molspercm2=massgases[igx][nlay]*niceabund[molek][k]/(nucleon*AllMolW[molek][k]);
+         molspercm3=molspercm2/(SlabThick[up_to_top-1-nlay]*100.0);
+
 
          // HITRAN line strength is in cm^2 per molecule
          // we need to convert again  --- SpectrumKays will now contain optical depth of each layer
          // No of molecules per cm^2=mass per cm^2/(mass 1 molecule)
          for(int iz=0; iz < isize; iz++){
             //convert to optical depth
-            SpectrumKays[iz]=SpectrumKays[iz]*massgases[igx][nlay]*niceabund[molek][k]
-                             /(nucleon*AllMolW[molek][k]);
+            SpectrumKays[iz]=SpectrumKays[iz]*molspercm2;
              //massgases in g per cm^2, nucleon in grammes.
              // 100 slabthick = slab in centimetres
-            if(outRef)SpectrumDeltaN[iz]=SpectrumDeltaN[iz]*massgases[igx][nlay]*niceabund[molek][k]
-                             /(nucleon*AllMolW[molek][k])/(100.*SlabThick[up_to_top-1-nlay]);
+            if(outRef)SpectrumDeltaN[iz]=SpectrumDeltaN[iz]*molspercm3;
          }
 
          if(logplot){
@@ -2154,6 +2161,9 @@ int main(int argc, char* argv[]){
           } 
 
          double sigmatau; //optical depth per cm based on molecular absorption of gas
+         double xwave;  //wavelength
+
+
 
          if(logplot){
 
@@ -2162,27 +2172,27 @@ int main(int argc, char* argv[]){
                   //remember spectrum kays has been multiplied by mass per cm^2/mass per molecule
                   //convert back to cm^2 per molecule for output
                   OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
-                           << log10(SpectrumKays[i]*nucleon*AllMolW[molek][k]) << endl;
+                           << log10(SpectrumKays[i]/molspercm2) << endl;
                   TauSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
                            << log10(SpectrumKays[i])<< endl;
                   if(outRef){
-                  sigmatau=SpectrumDeltaN[i]/2.0/pi*Speedlight  //(n^2-1)/4 pi N(per cc)
-                           *(SlabThick[up_to_top-1-nlay]*100.0)
-                           /(massgases[igx][nlay]*niceabund[molek][k]/nucleon/AllMolW[molek][k]);
+
+                  xwave=1./SpectrumWaves[i]; //wavelength in cm (cgs)
+
+                  sigmatau=SpectrumDeltaN[i]/2.0/pi/molspercm3;
                            //so far we have (n^2-1)/2 pi N = atomic polarisability of 1 molecule
                            // next convert to scattering cross section in cm^2 per molecule
                   sigmatau=sigmatau*sigmatau*128*pow(pi,5.0)/
-                           (3.0*pow(SpectrumWaves[i],4.0));
-                          //now convert to  scattering cross section for 1cm of gas
-                  sigmatau=sigmatau*niceabund[molek][k]/nucleon/AllMolW[molek][k];
-                          // now convert to "apparant" absorption for slab
-                  sigmatau=sigmatau*SlabThick[up_to_top-1-nlay]*100.0;
+                           (3.0*pow(xwave,4.0));
+                          //now convert to  scattering cross section for 1cm^3 of gas
+                  sigmatau=sigmatau*molspercm3;
 
 
  
                   if(sigmatau>0){
                   SigSpect <<  setprecision(11) << SpectrumWaves[i] <<  "   " 
                            << log10(sigmatau) << endl;}
+                 
                   }
 
               }  //endif  >0
@@ -2192,23 +2202,26 @@ int main(int argc, char* argv[]){
            // not log plot
            for(int i=0; i<isize; i++){
               OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
-                       << SpectrumKays[i]*nucleon*AllMolW[molek][k] << endl;
+                       << SpectrumKays[i]/molspercm2 << endl;
               TauSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
                        << SpectrumKays[i] << endl;
               if(outRef){
-                  sigmatau=SpectrumDeltaN[i]/2.0/pi*Speedlight
-                           /(massgases[igx][nlay]*niceabund[molek][k]/nucleon/AllMolW[molek][k]);
+
+                  xwave=1./SpectrumWaves[i]; //wavelength in cm (cgs)
+
+                  sigmatau=SpectrumDeltaN[i]/2.0/pi/molspercm3;
                            //so far we have (n^2-1)/2 pi N = atomic polarisability of 1 molecule
                            // next convert to scattering cross section in cm^2 per molecule
                   sigmatau=sigmatau*sigmatau*128*pow(pi,5.0)/
-                           (3.0*pow(SpectrumWaves[i],4.0));
-                          //now convert to  scattering cross section for 1cm of gas
-                  sigmatau=sigmatau*niceabund[molek][k]/nucleon/AllMolW[molek][k];
-                          // now convert to "apparant" absorption for slab
-                  sigmatau=sigmatau*SlabThick[up_to_top-1-nlay]*100.0;
+                           (3.0*pow(xwave,4.0));
+                          //now convert to  scattering cross section for 1cm^3 of gas
+                  sigmatau=sigmatau*molspercm3;
+
  
                   SigSpect <<  setprecision(11) << SpectrumWaves[i] <<  "   " 
                            << sigmatau << endl;}
+
+
            }
 
          }  //end for if logplot else

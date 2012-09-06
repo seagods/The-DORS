@@ -201,7 +201,7 @@ C     Self correction factors for 2000-3190 cm-1 (mt_ckd_2.5).
      1     1.180,1.130,1.080,1.040,1.000/
 C                                                                         F00290
 C
-      myself=.true.
+      myself=.false.
       myforeign=.true.
       RHOAVE = (PAVE/P0)*(T0/TAVE)                                        F00300
       XKT = TAVE/RADCN2                                                   F00310
