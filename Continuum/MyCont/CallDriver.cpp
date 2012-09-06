@@ -19,11 +19,8 @@ extern "C"{
 
 void driver_( double*, double*, double*, double*, double*, double*,
              double&, double&, double&, double&, double&, double&,
-             double&, double&, double&, double&, double& );
-
+             double&, double&, double&, double&, double&);
 }
-
-
 
 int main(){
 
@@ -34,22 +31,40 @@ int main(){
       double KNTH2O[5050], KNTCO2[5050], KNTO3[5050];
       double KNTO2[5050], KNTN2[5050], KNTRay[5050];
 
+      double R,AV;
+
       int NumPts;
 
 //     Pressure in mbar
-      Press=1012.0;
+      Press=1035.25;
 //     Temperature in Kelvin
-      Temp=290.0;
+      Temp=303.0;
 //     Path Lengh in cm
-      Xpath=1.0;
+      Xpath=5.0;
 
+      R=8.314472;
+      AV=6.0221415e23;             //Avogadro's number;
+
+//     1 bar = 10^5 Pascals
+
+       double moles_per_vol;
+       moles_per_vol=Press*1.0e2/R/Temp;
+
+       double Mols;
+       Mols=moles_per_vol*AV;
+
+       cout << "Number of Molecules per cubic metre=" <<Mols << endl;
 
 
 //     Lowest wave number
       Wave1=1.0;
-      Wave2=10000.0;
+      Wave2=2500.0;
+      Wave1=1460.0;
+      Wave2=1481.0;
+      Wave1=9400.0;
+      Wave2=9500.0;
 //     step in wave number
-      DWave=2.0;
+      DWave=.5;
 //     Number of Data points
 //     NPTABS =  1 + (V2abs-V1abs)/dvabs
       NumPts=1+(int)((Wave2-Wave1)/DWave);
@@ -57,7 +72,14 @@ int main(){
       if(NumPts>5040){"Number of Points too large in Continuum \n"; exit(1);}
 
 //     WaterMix=Volume mixing ratio of H2O
-      WaterMix=0.01;
+       WaterMix=0.01;
+       double WaterMols=WaterMix*Mols*1e-6;
+       cout << "Number of Water Molecules per CC=" <<WaterMols << endl;
+       double WaterMolSquare;
+       // number of molecules per cm^2 in path length Xpath
+       WaterMolSquare=WaterMols*Xpath;
+
+
 //     in ppmv
       CO2Mix=370.0;
       OzoMix=10.0;
@@ -69,7 +91,7 @@ int main(){
       OxyMix= 0.21;
 
       driver_(KNTH2O, KNTCO2, KNTO3, KNTO2, KNTN2, KNTRay
-             , Temp,Press,Xpath, Wave1, Wave2,DWave
+             , Temp, Press, Xpath, Wave1, Wave2, DWave
              , WaterMix, CO2Mix, NitroMix, OxyMix, OzoMix);
 
       ofstream OutPut;
@@ -89,7 +111,7 @@ int main(){
         for(int i=0; i<NumPts; i++){
            WV=Wave1+i*DWave;
            if(KNTH2O[i]>0){
-             logK=log(KNTH2O[i]);
+             logK=log10(KNTH2O[i]/WaterMolSquare);
              OutPut << WV << "  " << logK << endl;
              kountpos++;
            }

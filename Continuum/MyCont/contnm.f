@@ -1,3 +1,4 @@
+C     Chris Godsalve's Hack
 C     path:      $Source: /project/rc/rc1/cvsroot/rc/lblrtm/src/contnm.f,v $
 C     author:    $Author: jdelamer $
 C     revision:  $Revision: 9.22 $
@@ -42,37 +43,24 @@ C     Hack
      &,ABSRB3(n_absrb),ABSRB4(n_absrb),ABSRB5(n_absrb),ABSRB6(n_absrb)
 
       COMMON /XCONT/ V1C,V2C,DVC,NPTC,C(6000)
-C                                                                         F00100
-      CHARACTER*8      XID,       HMOLID,      YID 
-      REAL*8               SECANT,       XALTZ
-C                                                                         F00120
-      COMMON /CVRCNT/ HNAMCNT,HVRCNT
-      COMMON /FILHDR/ XID(10),SECANT,PAVE,TAVE,HMOLID(60),XALTZ(4),       F00130
-     *                WK(60),PZL,PZU,TZL,TZU,WBROAD,DV ,V1 ,V2 ,TBOUND,   F00140
-     *                EMISIV,FSCDID(17),NMOL,LAYER ,YI1,YID(10),LSTWDF    F00150
+
+      COMMON /FILHDR/ PAVE,TAVE, WK(60), WBROAD, DV ,V1 ,V2, NMOL
+
       COMMON /CONSTS/ PI,PLANCK,BOLTZ,CLIGHT,AVOGAD,ALOSMT,GASCON,
      *                RADCN1,RADCN2,GRAV,CPDAIR,AIRMWT,SECDY 
-      COMMON /IFIL/ IRD,IPR,IPU,NOPR,NFHDRF,NPHDRF,NFHDRL,NPHDRL,         F00170
-     *              NLNGTH,KFILE,KPANEL,LINFIL,NFILE,IAFIL,IEXFIL,        F00180
-     *              NLTEFL,LNFIL4,LNGTH4                                  F00190
-
-      common /cntscl/ XSELF,XFRGN,XCO2C,XO3CN,XO2CN,XN2CN,XRAYL
+c
 c
 c------------------------------------
 c for analytic derivative calculation
 c note: ipts  = same dimension as ABSRB
 c       ipts2 = same dimension as C
       parameter (ipts=5050,ipts2=6000)
-      common /CDERIV/ icflg,iuf,v1absc,v2absc,dvabsc,nptabsc,delT_pert,
-     &    dqh2oC(ipts),dTh2oC(ipts),dUh2o
 
-      real cself(ipts),cfrgn_aj(ipts)
+      real cself(ipts)
 c------------------------------------
 c
 c for cloud calculation
 c note: ipts  = same dimension as ABSRB
-c
-      DIMENSION c_cld(ipts) 
 c
 c------------------------------------
 c
@@ -82,10 +70,9 @@ c
       DIMENSION CCH0(5150),CCH1(5150),CCH2(5150)
 C
       REAL ABSBSV(n_absrb)
-C                                                                         F00230
-      CHARACTER*18 HNAMCNT,HVRCNT
-c
-      equivalence (fscdid(4), iaersl)
+      logical myself
+      logical myforeign
+
 c
       EQUIVALENCE (C0,SH2OT0,CN2T0,FCO2) , (C1,SH2OT1,CT1),               F00240
      *            (C2,FH2O,CT2)                                           F00250
@@ -213,24 +200,9 @@ C     Self correction factors for 2000-3190 cm-1 (mt_ckd_2.5).
      1     1.425,1.375,1.322,1.272,1.230,
      1     1.180,1.130,1.080,1.040,1.000/
 C                                                                         F00290
-C     ASSIGN SCCS VERSION NUMBER TO MODULE 
 C
-C     Continuum calculation flags:
-C     ---------------------------
-C     ICNTNM Value      Self     Foreign    Rayleigh     Others
-C           0            no        no          no          no
-C           1            yes       yes         yes         yes
-C           2            no        yes         yes         yes
-C           3            yes       no          yes         yes
-C           4            no        no          yes         yes
-C           5            yes       yes         no          yes
-C           6   READ IN XSELF, XFRGN, XCO2C, XO3CN, XO2CN, XN2CN, 
-C               and XRAYL in Record 1.2a
-C
-C     ASSIGN CVS VERSION NUMBER TO MODULE 
-c
-      HVRCNT = '$Revision: 9.22 $'
-C
+      myself=.true.
+      myforeign=.true.
       RHOAVE = (PAVE/P0)*(T0/TAVE)                                        F00300
       XKT = TAVE/RADCN2                                                   F00310
 
@@ -253,7 +225,7 @@ c
 c     H2O continuum derivatives are computed w.r.t. ln(q)
 c        dqh2o must be returned with the radiation field included
 
-      if (icflg.ne.-999) then
+C      if (icflg.ne.-999) then
 
 c     amounts except for species of interest and n2 have been set to zero in lblrtm.
 c     wn2 must be set to zero here:
@@ -264,43 +236,8 @@ c     zero derivative arrays and initialize panel information
 
           do j=1,ipts              
               cself(j) = 0.0
-              cfrgn_aj(j) = 0.0
           enddo
 
-          v1absc=v1abs
-          v2absc=v2abs
-          dvabsc=dvabs
-          nptabsc=nptabs
-      endif
-C                                                                       
-C=======================================================================
-C
-C**** CLOUD EFFECTIVE OPTICAL DEPTH  FROM "in_lblrtm_cld" file  ********
-C=======================================================================
-
-C     Hack --- This never happens --- comment out
-c
-C      if (iaersl.eq.5) then
-C
-C         call cld_od (V1C,V2C,DVC,NPTC,c_cld,layer,xkt)
-C
-C        ---------------------------------------------------------
-C        Radiation field                                           
-C                                                                  
-C         if (jrad.eq.1) then
-C
-C            do j = 1, nptc
-C               vj = v1c +real(j-1)*dvc
-C               c_cld(j) = c_cld(j)*RADFN(VJ,XKT)        
-C            enddo
-C
-C         endif
-C        ---------------------------------------------------------
-
-c        Interpolate to total optical depth grid
-
-C         CALL XINT (V1C,V2C,DVC,c_cld,1.0,V1ABS,DVABS,ABSRB,1,NPTABS)  
-C
 C      endif
 C        
 C=======================================================================
@@ -310,9 +247,9 @@ C                                                                         F00400
 C=======================================================================
 c
       h2o_fac  = WK(1)/Wtot
-      Rself    =     h2o_fac  * RHOave * 1.e-20 * xself
-      Rfrgn    = (1.-h2o_fac) * RHOave * 1.e-20 * xfrgn
-      Rfrgn_aj =     h2o_fac  * RHOave * 1.e-20 * xfrgn
+      Rself    =     h2o_fac  * RHOave * 1.e-20
+      Rfrgn    = (1.-h2o_fac) * RHOave * 1.e-20
+      Rfrgn_aj =     h2o_fac  * RHOave * 1.e-20
 C
 C=======================================================================
 C
@@ -334,7 +271,7 @@ C                             SELF
 C     Only calculate if V2 > -20. cm-1 and V1 <  20000. cm-1
 c
 
-      if ((V2.gt.-20.0).and.(V1.lt.20000.) .and. xself.gt.0.) then
+      if ((V2.gt.-20.0).and.(V1.lt.20000.)) then
 c
             CALL SL296 (V1C,V2C,DVC,NPTC,SH2OT0)                          F00410
             CALL SL260 (V1C,V2C,DVC,NPTC,SH2OT1)                          F00420
@@ -384,7 +321,7 @@ c********************************************
                dvh=DVC
                npth=NPTC
 c
-               csh2o(j)=1.e-20 * sh2o * xself  
+               csh2o(j)=1.e-20 * sh2o  
 c********************************************
 C                                                                         F00720
 C              ---------------------------------------------------------
@@ -396,8 +333,9 @@ C              ---------------------------------------------------------
  20         CONTINUE                                                      F00760
 C
 c           Interpolate to total optical depth grid
-
+         if(myself)then
          CALL XINT (V1C,V2C,DVC,cself,1.0,V1ABS,DVABS,ABSRB1,1,NPTABS)
+         endif
 
          endif
 C                                                                         F00780
@@ -408,7 +346,7 @@ C--------------------------------------------------------------------
 C
 C        Only calculate if V2 > -20. cm-1 and V1 <  20000. cm-1
 c
-         if ((V2.gt.-20.0).and.(V1.lt.20000.) .and. xfrgn.gt.0.) then
+         if ((V2.gt.-20.0).and.(V1.lt.20000.) ) then
 
 C---------------------------------------------------------------------------
 C           CORRECTION TO FOREIGN CONTINUUM   mt_ckd_2.4  Nov 2008    sac
@@ -446,7 +384,7 @@ C
                c_f = WK(1) * FH2O(J) 
 C                                          
 c********************************************
-               cfh2o(j)=1.e-20 * fh2o(j) * xfrgn
+               cfh2o(j)=1.e-20 * fh2o(j)
 c********************************************
 C              ---------------------------------------------------------
 C              Radiation field                                                  
@@ -455,23 +393,15 @@ C
 C              ---------------------------------------------------------
 
                C(J)        = c_f * RFRGN
-               cfrgn_aj(j) = c_f * rfrgn_aj
 C
  24         CONTINUE                                             
 C
+            if(myforeign)then
             CALL XINT (V1C,V2C,DVC,C,1.0,V1ABS,DVABS,ABSRB1,1,NPTABS)
+            endif
 C
 C           ------------------------------------------------------------
-c
-            if  (icflg.eq.1) then
 
-               do j=1,nptc
-                  c(j) =  cself(j)-cfrgn_aj(j)
-               enddo
-    
-               Call XINT (V1C,V2C,DVC,C,1.0,V1ABS,DVABS,ABSRB1,1,NPTABS)
-
-            endif
 
 C           ------------------------------------------------------------
 C                                                                         F00780
@@ -486,9 +416,9 @@ C                                                                         F00800
 C                                                                         F00810
 C        Only calculate if V2 > -20. cm-1 and V1 <  10000. cm-1
 c
-         if ((V2.gt.-20.0).and.(V1.lt.10000.) .and. xco2c.gt.0) then
+         if ((V2.gt.-20.0).and.(V1.lt.10000.) ) then
 c
-            WCO2 = WK(2) * RHOAVE * 1.0E-20 * xco2c
+            WCO2 = WK(2) * RHOAVE * 1.0E-20
 C                                                                         F00830
             CALL FRNCO2 (V1C,V2C,DVC,NPTC,FCO2,tave)                      F00840
 c
@@ -534,8 +464,8 @@ C     Smoothing coefficients from 8920.0-9165.0 cm-1 and from
 C     24570.0-24665.0 cm-1.  Data covers 9170.0-24565.0 cm-1
 C     region.
 C
-         IF (V2.GT.8920.0.AND.V1.LE.24665.0.and.xo3cn.gt.0.) THEN         F01200
-            WO3 = WK(3) * 1.0E-20 * xo3cn
+         IF (V2.GT.8920.0.AND.V1.LE.24665.0) THEN                         F01200
+            WO3 = WK(3) * 1.0E-20
             CALL XO3CHP (V1C,V2C,DVC,NPTO3,CCH0,CCH1,CCH2)                F01220
 C                                                                         F01230
             DT=TAVE-273.15
@@ -549,8 +479,8 @@ C                                                                         F01280
             CALL XINT (V1C,V2C,DVC,CCH0,1.0,V1ABS,DVABS,ABSRB3,1,NPTABS)  F01290
          ENDIF
 C                                                                         F01300
-         IF (V2.GT.27370..AND.V1.LT.40800. .and.xo3cn.gt.0.) THEN         F01310
-            WO3 = WK(3) * 1.E-20 * xo3cn
+         IF (V2.GT.27370..AND.V1.LT.40800.) THEN                          F01310
+            WO3 = WK(3) * 1.E-20
             TC = TAVE-273.15                                              F01330
             CALL O3HHT0 (V1C,V2C,DVC,NPTO3,C0)                            F01340
             CALL O3HHT1 (V1T1,V2T1,DVT1,NPT1,CT1)                         F01350
@@ -568,7 +498,7 @@ C           Save non-Hartley Huggins optical depth contribution to
 C           prevent double counting for wavenumber region beyond 
 C           40800 cm-1.
 C
-            IF ((VJ.GT.40815.).AND.(V2.GT.40800) .and.xo3cn.gt.0.) THEN
+            IF ((VJ.GT.40815.).AND.(V2.GT.40800) ) THEN
                I_FIX = (40800.-V1ABS)/DVABS+1.001
                DO 62 I=I_FIX,NPTABS
                   ABSBSV(I) = ABSRB(I)
@@ -582,7 +512,7 @@ C
 C           If V2 > 40800 cm-1, replace points with previously
 C           saved values (non-Hartley Huggins contribution)
 C
-            IF ((VJ.GT.40815.).AND.(V2.GT.40800).and.xo3cn.gt.0.)THEN
+            IF ((VJ.GT.40815.).AND.(V2.GT.40800))THEN
                DO 64 I=I_FIX,NPTABS
                   ABSRB(I) = ABSBSV(I)
  64            CONTINUE
@@ -591,8 +521,8 @@ C
 C
 C        If V2 > 40800 cm-1, add UV Hartley Huggins contribution
 C
-         IF (V2.GT.40800..AND.V1.LT.54000. .and.xo3cn.gt.0.) THEN
-            WO3 = WK(3) * xo3cn                                                   F01470
+         IF (V2.GT.40800..AND.V1.LT.54000.) THEN
+            WO3 = WK(3)                                                   F01470
             CALL O3HHUV (V1C,V2C,DVC,NPTO3,C0)                            F01480
 c                                                                         F01490
             DO 70 J = 1, NPTO3                                            F01500
@@ -640,9 +570,9 @@ c        Appl. Optics, 35, 5911-5917, (1996).
 c
 C        Only calculate if V2 > 1340. cm-1 and V1 <  1850. cm-1
 
-         if ((V2.gt.1340.0).and.(V1.lt.1850.).and. xo2cn.gt.0.) then
+         if ((V2.gt.1340.0).and.(V1.lt.1850.)) then
 c     
-            tau_fac = xo2cn *  Wk(7) * 1.e-20 * amagat 
+            tau_fac =  Wk(7) * 1.e-20 * amagat 
 c
 c           Wk(7) is the oxygen column amount in units of molec/cm2
 c           amagat is in units of amagats (air)
@@ -688,13 +618,13 @@ C        Journal of Geophysical Research (1997).
 C
 C        Only calculate if V2 > 7536. cm-1 and V1 <  8500. cm-1
 c
-         if ((V2.gt.7536.0).and.(V1.lt.8500.).and. xo2cn.gt.0.) then
+         if ((V2.gt.7536.0).and.(V1.lt.8500.)) then
 c
             a_o2  = 1./0.446
             a_n2  = 0.3/0.446
             a_h2o = 1.
 
-            tau_fac = xo2cn * (Wk(7)/xlosmt) * amagat * 
+            tau_fac = (Wk(7)/xlosmt) * amagat * 
      &           (a_o2*x_vmr_o2+a_n2*x_vmr_n2+a_h2o*x_vmr_h2o)
 
 c
@@ -722,10 +652,10 @@ C        Journal of Geophysical Research (1997).
 C
 C        Only calculate if V2 > 9100. cm-1 and V1 <  11000. cm-1
 c
-         if ((V2.gt.9100.0).and.(V1.lt.11000.).and. xo2cn.gt.0.) then
+         if ((V2.gt.9100.0).and.(V1.lt.11000.)) then
 c
             CALL O2INF2 (V1C,V2C,DVC,NPTC,C0)                      
-            WO2 = xo2cn * (WK(7)*1.e-20) * RHOAVE
+            WO2 = (WK(7)*1.e-20) * RHOAVE
             ADJWO2 = (WK(7)/WTOT) * (1./0.209) * WO2
 c
             DO 93 J = 1, NPTC                                                
@@ -752,9 +682,9 @@ c        subroutine o2_vis
 C
 C        Only calculate if V2 > 15000. cm-1 and V1 <  29870. cm-1
 c
-         if ((V2.gt.15000.0).and.(V1.lt.29870.).and. xo2cn.gt.0.) then
+         if ((V2.gt.15000.0).and.(V1.lt.29870.)) then
 c
-            WO2 = WK(7) * 1.e-20 * ((pave/1013.)*(273./tave)) * xo2cn
+            WO2 = WK(7) * 1.e-20 * ((pave/1013.)*(273./tave)) 
             CHIO2 =  WK(7)/WTOT 
             ADJWO2 = chio2 * WO2
 c
@@ -776,9 +706,9 @@ c
 c
 C        Only calculate if V2 > 36000. cm-1
 
-         if (V2.gt.36000.0 .and. xo2cn.gt.0.) then
+         if (V2.gt.36000.0) then
 
-            WO2 = WK(7) * 1.e-20 * xo2cn
+            WO2 = WK(7) * 1.e-20 
 c
             CALL O2HERZ (V1C,V2C,DVC,NPTC,C0,TAVE,PAVE)                   F01820
             DO 90 J = 1, NPTC                                             F01830
@@ -819,7 +749,7 @@ C        THIS NITROGEN CONTINUUM IS IN UNITS OF 1./(CM AMAGAT^2)
 C
 C        Only calculate if V2 > -10. cm-1 and V1 <  350. cm-1
 c
-         if ((V2.gt.-10.0).and.(V1.lt.350.).and. xn2cn.gt.0.) then
+         if ((V2.gt.-10.0).and.(V1.lt.350.)) then
 c
 C           The following puts WXN2 units in 1./(CM AMAGAT)
 C
@@ -830,7 +760,7 @@ c     a_h2o represents the relative broadening efficiency of h2o
 
 c     correct formulation for consistency with LBLRTM (per molec/cm^2)
 c
-            tau_fac =  xn2cn * (Wn2/xlosmt) * amagat
+            tau_fac =  (Wn2/xlosmt) * amagat
 C                                                                         F00480
             CALL xn2_r (V1C,V2C,DVC,NPTC,c0,c1,Tave)
 c
@@ -867,7 +797,7 @@ c        5911-5917, (1996).
 c
 C        Only calculate if V2 > 2085. cm-1 and V1 <  2670. cm-1
 C
-         if ((V2.gt.2085.0).and.(V1.lt.2670.).and. xn2cn.gt.0.) then
+         if ((V2.gt.2085.0).and.(V1.lt.2670.)) then
 c
 c           The absorption coefficients from the Lafferty et al. reference 
 c           are for pure nitrogen (absorber and broadener)
@@ -880,7 +810,7 @@ c           a_h2o represents the relative broadening efficiency of h2o
 
 c     correct formulation for consistency with LBLRTM (per molec/cm^2)
 c
-            tau_fac =  xn2cn* (Wn2/xlosmt) *
+            tau_fac =  (Wn2/xlosmt) *
      &           amagat * (x_vmr_n2+a_o2*x_vmr_o2+a_h2o*x_vmr_h2o)
 
 c
@@ -952,12 +882,11 @@ c
 c     Rayleigh scattering in the direct beam is only calculated for
 c     model runs > 3100 cm-1.
 c
-         If ((iaersl.eq.0 .or. iaersl.eq.5).and. v2.ge.3100. 
-     &       .and. xrayl.gt.0.) then
+         If ( v2.ge.3100.) then
 c
 c        Thus the current formulation is
 
-            conv_cm2mol = xrayl*1.E-20/(2.68675e-1*1.e5)
+            conv_cm2mol = 1.E-20/(2.68675e-1*1.e5)
 c
 
             do 95 i=1,nptabs
@@ -986,38 +915,6 @@ C                                                                         F01940
      *          '     *********************************************',/)
 C
       END                                                                 F01950
-C
-C     --------------------------------------------------------------
-C
-C
-      SUBROUTINE PRCNTM                                                   A10270
-C                                                                         A10280
-C     THIS SUBROUTINE PRINTS THE CONTINUUM INFORMATION TO FILE IPR        A10290
-C                                                                         A10300
-      COMMON /IFIL/ IRD,IPR,IPU,NOPR,NFHDRF,NPHDRF,NFHDRL,NPHDRL,         A10310
-     *              NLNGTH,KFILE,KPANEL,LINFIL,NDFLE,IAFIL,IEXFIL,        A10320
-     *              NLTEFL,LNFIL4,LNGTH4                                  A10330
-C
-      COMMON /CNTPR/ CINFO1,CINFO2,cnam3,CINFO3,cnam4,CINFO4,CHEADING
-C
-      CHARACTER*18 cnam3(9),cnam4(29)
-      CHARACTER*51 CINFO1(2,11),CINFO2(2,11),CINFO3(2,9),CINFO4(2,29)
-      CHARACTER*40 CHEADING(3,2)
-C                                                                         A10340
-      WRITE (IPR,910) ((CINFO1(I,J),I=1,2),J=1,11)
-      WRITE (IPR,910) ((CINFO2(I,J),I=1,2),J=1,11)
-      WRITE (IPR,918) ((CHEADING(I,J),I=1,3),J=1,2)
-      WRITE (IPR,915) (cnam3(j),(CINFO3(I,J),I=1,2),J=1,9)
-      WRITE (IPR,915) (cnam4(j),(CINFO4(I,J),I=1,2),J=1,29)
-C                                                                         A10360
-      RETURN                                                              A10370
-C                                                                         A10380
- 910  FORMAT (18x,2A51)
- 915  FORMAT (a18,2A51)
- 918  FORMAT (3A40)
-C                                                                         A10580
-
-      END                                                                 A10590
 C
 C     --------------------------------------------------------------
       BLOCK DATA CNTINF
@@ -9401,118 +9298,3 @@ C                                                                         F43280
 C                                                                         F43300
       END                                                                 F43310
 C
-C
-C      Hack-Comment out entire subroutine
-C
-C     --------------------------------------------------------------
-C      subroutine cld_od(V1C,V2C,DVC,NPTC,C,layer,xkt)
-C     --------------------------------------------------------------
-C
-C      IMPLICIT REAL*8           (V)       
-C
-C      parameter (n_absrb=5050)
-C
-C      COMMON /ABSORB/ V1ABS,V2ABS,DVABS,NPTABS,ABSRB(n_absrb)
-C
-C      COMMON /IFIL/ IRD,IPR,IPU,NOPR,NFHDRF,NPHDRF,NFHDRL,NPHDRL,         F00170
-C     *              NLNGTH,KFILE,KPANEL,LINFIL,NFILE,IAFIL,IEXFIL,        F00180
-C     *              NLTEFL,LNFIL4,LNGTH4                                  F00190
-c
-C      parameter (n_lyr=200,n_cld=500)
-c
-C      COMMON /cld_rd/ n_freq, n_align, v_cloud_freq(n_cld), 
-C     &                                      cloudodlayer(n_lyr,n_cld) 
-C      DIMENSION C(*) 
-C
-C      logical EX
-C      character*55 in_cld_file
-C      dimension i_layer(n_lyr), pres_layer_dum(n_lyr), v_cntnm(n_lyr)
-C
-C      data in_cld_file /'in_lblrtm_cld'/
-C      data dvs /5./
-C
-C     ----------------------------------------------------------
-C     Read in TES cloud effective optical depth file
-C     ----------------------------------------------------------
-c
-C      if (layer .eq. 1) then
-C         open (35,FILE=in_cld_file,STATUS='OLD')
-C         read (35,*) n_freq
-C         read (35,*) (v_cloud_freq(j),j=1,n_freq)
-
-C         write (ipr,*)  
-C         write (ipr,*) 
-C     &           '** iaersl=5; Cloud Information from "in_cld_file" **'
-C         write (ipr,'(" n_freq = ",i5)') n_freq
-C         write (ipr,'(5x,10f10.4)') (v_cloud_freq(j),j=1,n_freq)
-C
-C         read (35,*) n_layer
-C         
-C         write (ipr,'(" n_layer = ",i5)') n_layer
-C
-C         do l =1,n_layer
-C            read (35,*) i_layer(l), pres_layer_dum(l)
-C            read (35,*) (cloudodlayer(l,j),j=1,n_freq)
-C            write (ipr,'(i5,f12.5)') i_layer(l), pres_layer_dum(l)
-C            write (ipr,'(5x,10f10.4)') (cloudodlayer(l,j),j=1,n_freq)
-C         enddo
-C         close (35)
-C      
-C      endif
-
-c
-C        ----------------------------------------------------------
-C        Generated output continuum grid  
-C        ----------------------------------------------------------
-C
-C      DVC = DVS                                                     
-C      V1C = V1ABS-10.                                               
-C      V2C = V2ABS+10.
-C      NPTC = ((V2C - V1C)/DVC) + 1
-C
-C      do J = 1, NPTC                                         
-C         v_cntnm(j) = V1C+DVC* REAL(J-1)                 
-C      enddo
-C
-C        ----------------------------------------------------------
-C        Linearly interpolate TES cloud effective optical depth onto continuum grid
-C        ----------------------------------------------------------
-C
-C      ilo = 1
-C      do j=1, NPTC 
-C         IF (v_cntnm(j).LE.v_cloud_freq(1))      THEN  
-C            C(j) = cloudodlayer(layer,1)
-C            GO TO 10
-C         ELSE IF (v_cntnm(j).GT.v_cloud_freq(n_freq)) THEN  
-C            C(j) = cloudodlayer(layer,n_freq)
-C            GO TO 10            
-C         END IF
-         
-C         do i=ilo, n_freq
-C            IF (v_cntnm(j).LE.v_cloud_freq(i))  THEN   
-C               v_m=(cloudodlayer(layer,i)-cloudodlayer(layer,i-1))/
-C     *              (v_cloud_freq(i)-v_cloud_freq(i-1))
-C               C(j) = cloudodlayer(layer,i-1)+
-C     *              (v_cntnm(j)-v_cloud_freq(i-1))*v_m
-C               ilo = i-1
-C               GO TO 10
-C            END IF
-C         enddo
-C         
-C 10      continue
-c     
-C         if (v_cntnm(j).eq.0.) then
-C            C(j) = 0.
-C         else
-C            C(j) = C(j)/RADFN(v_cntnm(j),XKT)   
-C         endif
-         
-C         if (ilo.lt.1) ilo = 1
-c     
-C      enddo
-
-C                                                            
-C      RETURN
-C      END                                                    
-C
-

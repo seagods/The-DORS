@@ -1,5 +1,7 @@
-g++ -g -c CallDriver.cpp
+g++ -g -c CallDriver.cpp -lm
 gfortran -g -c driver.f
-g++ -g -o  Cont CallDriver.o driver.o -lgfortran
+gfortran -g -c XINT.f
+gfortran -g -c RadFunk.f
+g++ -g -o  Cont CallDriver.o driver.o RadFunk.o XINT.o -lgfortran -lm
 rm *.o
 

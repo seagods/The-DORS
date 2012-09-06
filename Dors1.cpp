@@ -934,7 +934,7 @@ int main(int argc, char* argv[]){
           totalmasses[k]=totalmasses[k]+massgases[nsplit1-i][k];
         }
         totalmass=totalmass+massgas[nsplit1-i];
-        if(verbose_height)cout << AvTemp[nsplit1-i] << "  " << AvPress[nsplit1-i] << "  " << totalmass <<endl;
+        if(verbose_height)cout << "Averages " << AvTemp[nsplit1-i] << "  " << AvPress[nsplit1-i] << "  " << totalmass <<endl;
         }
        idown=idown+nsplit1;
        if(verbose_out)cout << "***************************************\n";
@@ -964,7 +964,7 @@ int main(int argc, char* argv[]){
           totalmasses[k]=totalmasses[k]+massgases[nsplit2-i+idown][k];
         }
         totalmass=totalmass+massgas[nsplit2-i+idown];
-        if(verbose_height)cout << AvTemp[nsplit2-i+idown] << "  " << AvPress[nsplit2-i+idown] << "  " << totalmass << endl;
+        if(verbose_height)cout << "Averages " << AvTemp[nsplit2-i+idown] << "  " << AvPress[nsplit2-i+idown] << "  " << totalmass << endl;
         }
        idown=idown+nsplit2;
        if(verbose_out)cout << "***************************************\n";
@@ -994,7 +994,7 @@ int main(int argc, char* argv[]){
           totalmasses[k]=totalmasses[k]+massgases[nsplit3-i+idown][k];
         }
         totalmass=totalmass+massgas[nsplit3-i+idown];
-        if(verbose_height)cout << AvTemp[nsplit3-i+idown] << "  " << AvPress[nsplit3-i+idown] << "  " << totalmass << endl;
+        if(verbose_height)cout << "Averages " << AvTemp[nsplit3-i+idown] << "  " << AvPress[nsplit3-i+idown] << "  " << totalmass << endl;
         }
        idown=idown+nsplit3;
        if(verbose_out)cout << "***************************************\n";
@@ -1024,7 +1024,7 @@ int main(int argc, char* argv[]){
           totalmasses[k]=totalmasses[k]+massgases[nsplit4-i+idown][k];
         }
         totalmass=totalmass+massgas[nsplit4-i+idown];
-        if(verbose_height)cout << AvTemp[i+idown] << "  " << AvPress[i+idown] << "  " << totalmass << endl;
+        if(verbose_height)cout <<"Averages " <<  AvTemp[nsplit4-i+idown] << "  " << AvPress[nsplit4-i+idown] << "  " << totalmass <<   "  layer=" << nsplit4-i+idown << "  idown=" << idown <<endl;
         }
 
         cout << "mass of gas per square metre * g=" << 9.81*totalmass << "  Pascals="  
@@ -1071,7 +1071,6 @@ int main(int argc, char* argv[]){
                   //divided by 100 because slabthick in metres - want cm^{-3}
              }
         }
-
         if(verbose_out)cout << "totals\n";
 
         for(int k=0; k < ngas ; k++){
@@ -1079,6 +1078,7 @@ int main(int argc, char* argv[]){
 
         if(verbose_out)cout <<  "  totalmass=" << totalmass << "g per cm^2" << "  ground pressure now "
                             << 9.81*10*totalmass << " Pascals" <<endl; 
+
 
 
 /***************************************************************************************
@@ -1349,6 +1349,9 @@ int main(int argc, char* argv[]){
         } //endif for UseParFile
 
 
+
+
+
         cout <<" gid=" << molecule << "  gmask= " << gmask[molek] << endl;
              cout <<"nu1="  << nu1 << " nu2=" << nu2 <<endl;
 
@@ -1529,7 +1532,7 @@ int main(int argc, char* argv[]){
       
           }
 
-          exit(0);
+          cout <<"Exit at at THIS LINE ARSE!\n";  exit(0);
 
           } // endif molecule=3
 
@@ -1554,6 +1557,7 @@ int main(int argc, char* argv[]){
 /*******************************BEGIN STAGE 4B ***************************************/
 /************************ 4B BEGINS INSIDE LOOP INSIDE  LOOP ****************************/
 /********************     FOR EACH ISO -- FOR EACH LAYER            *****************/
+
        if(UseParFile){
 
         //FOR EACH ISO
@@ -1575,7 +1579,7 @@ int main(int argc, char* argv[]){
          //BD_TIPS_2003 Routine provided by HITRAN.
 
         bd_tips_2003_(molecule, RefTemp, k_fort, Refgee_i, QT);
-        ofstream OutSpect; ofstream RefSpect; ofstream TauSpect;
+        ofstream OutSpect; ofstream RefSpect; ofstream TauSpect; ofstream SigSpect;
 
         if(!LayerChange){
            NLStart=0;
@@ -1591,7 +1595,10 @@ int main(int argc, char* argv[]){
         for(int nlay=NLStart; nlay < NLStop; nlay++){
 
             TempNlay=AvTemp[nlay];
-            PressNlay=AvPress[nlay];
+            PressNlay=AvPress[nlay]*100.;
+
+            //AvPress in mbar, Ref Pressure in Pascal
+
 
 
           //BD_TIPS_2003 Routine provided by HITRAN.
@@ -1638,12 +1645,13 @@ int main(int argc, char* argv[]){
 
            //   cout << "new centre at " << linecentres[k][l] <<  "  k and l " << k << "  " << l << endl; 
               //This is a half width -- dont want it                
-//              alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress)
+//              alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*PressNlay/RefPress)
 //                          /Speedlight*sqrt(2.0*Boltz*TempNlay*log2/(AllMolW[molek][k]*nucleon));
                //Want 1/e width =half width divided by sqrt(log(2))
+              //  awkward - but for now multiply <P> by 100 since RefPress in Pascals
 
                if(ShiftLine){
-               alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress)
+               alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*PressNlay/RefPress)
                           /Speedlight*sqrt(2.0*Boltz*TempNlay/(AllMolW[molek][k]*nucleon));}
                else{
                alphaDop[l]=wavenumlines[l]
@@ -1657,16 +1665,26 @@ int main(int argc, char* argv[]){
               //    ARSE!
               //
               //  We assume there is only air broadening for k>0
+
               if(k==0){
                  PartPress=massgases[nlay][igx]/massgas[nlay]*MWA/AllMolW[molek][k];
-                 alphaLorentzA[l]=AvPress[nlay]/RefPress*(
+
+                 alphaLorentzA[l]=PressNlay/RefPress*(
                  linegammaAir[k][l]*(1.0-PartPress)+linegammaSelf[k][l]*PartPress
                    )*pow(RefTemp/TempNlay,lineTdep[k][l]);
                }
                else{
-                 alphaLorentzA[l]=linegammaAir[k][l]*AvPress[nlay]/RefPress
+                 //don't bother with self broadening for other isotopes [k]
+                 alphaLorentzA[l]=linegammaAir[k][l]*PressNlay/RefPress
                                 *pow(RefTemp/TempNlay,lineTdep[k][l]);
                }
+/*            // diagnostic write
+              cout << alphaLorentzA[l] << "  P=" << PressNlay  
+                    << "  " << alphaDop[l]  << " Part Pres=  " << PartPress << 
+                   "  " <<  pow(RefTemp/TempNlay,lineTdep[k][l]) <<
+                   "  " <<  linegammaAir[k][l] << "  " << linegammaSelf[k][l] << 
+                   "  " << linestrengths[k][l] << endl;
+*/
 
               // Ref Paper HITRAN 96 eqn A.10
               strengthlines[l]=linestrengths[k][l]*QTref[molek][k]/QT
@@ -1679,7 +1697,6 @@ int main(int argc, char* argv[]){
               }
               //now we have the x and y vectors for all the lines
             }  //end loop over nlines
-
  
 /*******************************BEGIN STAGE 4B PROPER - WORK OUT SPECTRUMWAVES **********************/
             vector<double> SpectrumWaves; 
@@ -1722,7 +1739,7 @@ int main(int argc, char* argv[]){
                  }
 
                  if(ShiftLine){
-                 currentnu0=currentnu0-lineShift[k][icurrent]*AvPress[nlay]/RefPress;}
+                 currentnu0=currentnu0-lineShift[k][icurrent]*PressNlay/RefPress;}
                  else{
                  currentnu0=currentnu0;}
 
@@ -1757,7 +1774,7 @@ int main(int argc, char* argv[]){
                    //skipline is mostly still false, but occasionally nextnu0 is same
                    //as currentnu0  --- but occasionally skipline will be reset to true
               if(ShiftLine){
-                 currentnu0=currentnu0-lineShift[k][icurrent]*AvPress[nlay]/RefPress;
+                 currentnu0=currentnu0-lineShift[k][icurrent]*PressNlay/RefPress;
               }
 
               //set current width
@@ -1883,7 +1900,7 @@ int main(int argc, char* argv[]){
            for(int l=0; l<nulength-1; l++){
           
               if(ShiftLine){
-              currentnu0=wavenumlines[l]-lineShift[k][l]*AvPress[nlay]/RefPress;}
+              currentnu0=wavenumlines[l]-lineShift[k][l]*PressNlay/RefPress;}
               else{
               currentnu0=wavenumlines[l];}
             
@@ -1940,8 +1957,11 @@ int main(int argc, char* argv[]){
 
               //remember the first entry in Xvector is the line centre
 
-              double XVEC[Nwaves],KVEC[Nwaves];
+              double* XVEC=new double[Nwaves];
+              double* KVEC=new double[Nwaves];
+    //          double XVEC[Nwaves],KVEC[Nwaves];
               for(int j=leftwaves-1; j>=0; j--){
+              //    cout << leftwaves-1-j << "  " << j << endl;
                   XVEC[leftwaves-1-j]=(Xvector[j]-Xvector[0])/alphaD;
                   KVEC[leftwaves-1-j]=0.0;
               }
@@ -1951,6 +1971,8 @@ int main(int argc, char* argv[]){
               }
               //calculate voigt profile
               humlik_(Nwaves, XVEC, yfac, KVEC);
+
+
 
               for(int j=0; j<leftwaves; j++){
                   SpectrumKays[ISpect[leftwaves-1-j]]=SpectrumKays[ISpect[leftwaves-1-j]]
@@ -1976,10 +1998,9 @@ int main(int argc, char* argv[]){
               } 
 
               //cout << currentnu0 << "  " << wavenumlines[l] << "  " << leftwaves << "  " << rightwaves << endl;
-
+              delete[] XVEC; delete[]KVEC;
               Xvector.erase(Xvector.begin(), Xvector.end());
-              ISpect.erase(ISpect.begin(), ISpect.end());    
-              //XVEC and KVEC go out of scope automatically- redeclared in loop                 
+              ISpect.erase(ISpect.begin(), ISpect.end());                 
            }  //end for loop l<nulength over centre wavelengths
 
 
@@ -2002,21 +2023,26 @@ int main(int argc, char* argv[]){
         string SpectFile;
         string SpectFileT;
         string SpectFileN;
+        string SpectFileS;
         SpectFile=AllMols[molek];
         SpectFileT=AllMols[molek];
         SpectFileN=AllMols[molek];
+        SpectFileS=AllMols[molek];
       //  cout << AllMols[0] << "  " << AllMols[1] <<  "  " << AllMols[2]  << "  molecule=  " << molecule 
       //  << " gases ig= " << gases[igx] << endl;
      //   cout << SpectFile << endl; exit(0);
         const string SpectDir("MolSpect");
         const string SpectDirT("TauSpect");
         const string SpectDirN("RefSpect");
+        const string SpectDirS("SigSpect");
         SpectFile.replace(0, 11, SpectDir);
         SpectFileT.replace(0, 11, SpectDirT);
         SpectFileN.replace(0, 11, SpectDirN);
+        SpectFileS.replace(0, 11, SpectDirS);  //Sigma spect will contain Rayleigh Depth from H2O scattering.
         cout << SpectFile << endl;
         cout << SpectFileT << endl;
         cout << SpectFileN << endl;
+        cout << SpectFileS << endl;
         ostringstream oss_outcode; //output file has isotopologue number and  layer number
         int isorep1, isorep2;
 
@@ -2044,9 +2070,11 @@ int main(int argc, char* argv[]){
          SpectFile.insert(ipos,modstring);
          SpectFileT.insert(ipos,modstring);
          SpectFileN.insert(ipos,modstring);
+         SpectFileS.insert(ipos,modstring);
          cout << SpectFile << "  " << nlay << "  "  << k << endl;  
          cout << SpectFileT << "  " << nlay << "  "  << k << endl;  
          cout << SpectFileN << "  " << nlay << "  "  << k << endl;  
+         cout << SpectFileS << "  " << nlay << "  "  << k << endl;  
 
          if(firstwrite){
            int Status=-1000;
@@ -2054,7 +2082,7 @@ int main(int argc, char* argv[]){
            Status=stat(SpectFile.c_str(),&FileInfo);
            //returns 0 if successfully get File Infor, -1 if it fails to find the file
            if(Status==0){
-             cout << "File " << SpectFile << " already exists-We will not overwite it or append to it!\n";
+             cout << "File " << SpectFile << " already exists-We will not overwrite it or append to it!\n";
              exit(0);}
           } //endif firstwrite
 
@@ -2062,12 +2090,18 @@ int main(int argc, char* argv[]){
          int kountzero=0;
          int isize=SpectrumWaves.size();
 
+         int isize2;
+
+
          // HITRAN line strength is in cm^2 per molecule
-         // we need to convert again  --- SpectrumKays now contains optical depth of each layer
+         // we need to convert again  --- SpectrumKays will now contain optical depth of each layer
+         // No of molecules per cm^2=mass per cm^2/(mass 1 molecule)
          for(int iz=0; iz < isize; iz++){
+            //convert to optical depth
             SpectrumKays[iz]=SpectrumKays[iz]*massgases[igx][nlay]*niceabund[molek][k]
                              /(nucleon*AllMolW[molek][k]);
              //massgases in g per cm^2, nucleon in grammes.
+             // 100 slabthick = slab in centimetres
             if(outRef)SpectrumDeltaN[iz]=SpectrumDeltaN[iz]*massgases[igx][nlay]*niceabund[molek][k]
                              /(nucleon*AllMolW[molek][k])/(100.*SlabThick[up_to_top-1-nlay]);
          }
@@ -2077,6 +2111,7 @@ int main(int argc, char* argv[]){
            for(int iz=0; iz < isize; iz++){
               if(SpectrumKays[iz]<=0.0)kountzero++;
          }}
+         if(logplot){isize2=isize-kountzero;} else {isize2=isize;}
 
          // for PlotIt        
          int ntype=0;   //points=1   lines=0
@@ -2088,57 +2123,101 @@ int main(int argc, char* argv[]){
          OutSpect.open(SpectFile.c_str(),ios::out | ios::app);
          TauSpect.open(SpectFileT.c_str(),ios::out | ios::app);
          if(outRef)RefSpect.open(SpectFileN.c_str(),ios::out | ios::app);
-
+         if(outRef)SigSpect.open(SpectFileS.c_str(),ios::out | ios::app);
          if(!LayerChange){
          if(nlay==0)OutSpect << up_to_top << endl;
          if(nlay==0)TauSpect << up_to_top << endl;
          if(nlay==0)RefSpect << up_to_top << endl;
+         if(nlay==0)SigSpect << up_to_top << endl;
          }
          else{
          if(nlay==NLStart)OutSpect << NLStop-NLStart << endl;
          if(nlay==NLStart)TauSpect << NLStop-NLStart << endl;
          if(nlay==NLStart)RefSpect << NLStop-NLStart << endl;
+         if(nlay==NLStart)SigSpect << NLStop-NLStart << endl;
          }
 
 
           if(PlotIt){
-            OutSpect << isize-kountzero <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
-            TauSpect << isize-kountzero <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
+            OutSpect << isize2 <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
+            TauSpect << isize2 <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
             if(outRef)
-            RefSpect << isize-kountzero <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
+            RefSpect << isize2 <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
+            if(outRef)
+            SigSpect << isize2 <<  "  " << ntype << "  " << ncol << "  " << nstyle << "  " << npoint << endl;
           } 
           else{       
-            OutSpect << isize-kountzero << endl;
-            TauSpect << isize-kountzero << endl;
-            if(outRef)RefSpect << isize-kountzero << endl;
+            OutSpect << isize2 << endl;
+            TauSpect << isize2 << endl;
+            if(outRef)RefSpect << isize << endl;
+            if(outRef)SigSpect << isize << endl;
           } 
+
+         double sigmatau; //optical depth per cm based on molecular absorption of gas
 
          if(logplot){
 
             for(int i=0; i<isize; i++){
               if(SpectrumKays[i]>0){
+                  //remember spectrum kays has been multiplied by mass per cm^2/mass per molecule
                   //convert back to cm^2 per molecule for output
                   OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
-                           << log10(SpectrumKays[i]*nucleon*AllMolW[molek][k]  ) << endl;
+                           << log10(SpectrumKays[i]*nucleon*AllMolW[molek][k]) << endl;
                   TauSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
-                           << log10(SpectrumKays[i]) << endl;
+                           << log10(SpectrumKays[i])<< endl;
+                  if(outRef){
+                  sigmatau=SpectrumDeltaN[i]/2.0/pi*Speedlight  //(n^2-1)/4 pi N(per cc)
+                           *(SlabThick[up_to_top-1-nlay]*100.0)
+                           /(massgases[igx][nlay]*niceabund[molek][k]/nucleon/AllMolW[molek][k]);
+                           //so far we have (n^2-1)/2 pi N = atomic polarisability of 1 molecule
+                           // next convert to scattering cross section in cm^2 per molecule
+                  sigmatau=sigmatau*sigmatau*128*pow(pi,5.0)/
+                           (3.0*pow(SpectrumWaves[i],4.0));
+                          //now convert to  scattering cross section for 1cm of gas
+                  sigmatau=sigmatau*niceabund[molek][k]/nucleon/AllMolW[molek][k];
+                          // now convert to "apparant" absorption for slab
+                  sigmatau=sigmatau*SlabThick[up_to_top-1-nlay]*100.0;
+
+
+ 
+                  if(sigmatau>0){
+                  SigSpect <<  setprecision(11) << SpectrumWaves[i] <<  "   " 
+                           << log10(sigmatau) << endl;}
+                  }
+
               }  //endif  >0
              } //end for loop}
          }
          else{
-
+           // not log plot
            for(int i=0; i<isize; i++){
               OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
                        << SpectrumKays[i]*nucleon*AllMolW[molek][k] << endl;
               TauSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
                        << SpectrumKays[i] << endl;
+              if(outRef){
+                  sigmatau=SpectrumDeltaN[i]/2.0/pi*Speedlight
+                           /(massgases[igx][nlay]*niceabund[molek][k]/nucleon/AllMolW[molek][k]);
+                           //so far we have (n^2-1)/2 pi N = atomic polarisability of 1 molecule
+                           // next convert to scattering cross section in cm^2 per molecule
+                  sigmatau=sigmatau*sigmatau*128*pow(pi,5.0)/
+                           (3.0*pow(SpectrumWaves[i],4.0));
+                          //now convert to  scattering cross section for 1cm of gas
+                  sigmatau=sigmatau*niceabund[molek][k]/nucleon/AllMolW[molek][k];
+                          // now convert to "apparant" absorption for slab
+                  sigmatau=sigmatau*SlabThick[up_to_top-1-nlay]*100.0;
+ 
+                  SigSpect <<  setprecision(11) << SpectrumWaves[i] <<  "   " 
+                           << sigmatau << endl;}
            }
-  
+
          }  //end for if logplot else
          //Ref index always has negatives, no log plot
            if(outRef){
            for(int i=0; i<isize; i++){
-              RefSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << SpectrumDeltaN[i] << endl;
+          //    if(fabs(SpectrumDeltaN[i])<2e-13){
+              RefSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << Speedlight*SpectrumDeltaN[i] << endl;
+          //    }
            }}
 
 
@@ -2148,16 +2227,19 @@ int main(int argc, char* argv[]){
   
               OutSpect << 1 << "  " <<  1 << endl;
               OutSpect << "Wave@Number   @per_cm" << endl;
-              OutSpect << 1 << "  " <<  1 << endl;  //for vertical axis
+              OutSpect << 1 << "  " <<  1 << endl;  // this line for vertical axis
 
               TauSpect << 1 << "  " <<  1 << endl;
               TauSpect << "Wave@Number   @per_cm" << endl;
-              TauSpect << 1 << "  " <<  0 << endl;  //for vertical axis
+              TauSpect << 1 << "  " <<  0 << endl;  // this line for vertical axis
 
               if(outRef){
                 RefSpect << 1 << "  " <<  1 << endl;
                 RefSpect << "Wave@Number   @per_cm" << endl;
-                RefSpect << 1 << "  " <<  0 << endl;  //for vertical axis
+                RefSpect << 1 << "  " <<  0 << endl;  // this linefor vertical axis
+                SigSpect << 1 << "  " <<  1 << endl;
+                SigSpect << "Wave@Number   @per_cm" << endl;
+                SigSpect << 1 << "  " <<  0 << endl;  // this linefor vertical axis
               }
               if(logplot){
                  OutSpect << "log10(Cross@Section)    @cm^2@Per@Mol" << endl;}
@@ -2165,9 +2247,11 @@ int main(int argc, char* argv[]){
                  OutSpect << "Cross@Section   @cm^2@Per@Mol" << endl;
               }
               if(logplot){
-                 TauSpect << "log10(Optical@Depth)" << endl;}
+                 TauSpect << "log10(Optical@Depth)" << endl;
+                 if(outRef)SigSpect << "log10(scattering@optical@depth)    ." << endl;}
               else{
                  TauSpect << "Optical@Depth " << endl;
+                 if(outRef)SigSpect << "scattering@optical@depth    ." << endl;
               }
               if(outRef)RefSpect << "(n-1)" << endl;
 
@@ -2175,15 +2259,18 @@ int main(int argc, char* argv[]){
                  OutSpect << "1" << endl;
                  TauSpect << "1" << endl;
                  if(outRef)RefSpect << "1" << endl;
+                 if(outRef)SigSpect << "1" << endl;
 
              for(int laynumber=0; laynumber< up_to_top; laynumber++){
                 OutSpect << "Layer=@" << laynumber << endl;
                 TauSpect << "Layer=@" << laynumber << endl;
                 if(outRef)RefSpect << "Layer=@" << laynumber << endl;
+                if(outRef)SigSpect << "Layer=@" << laynumber << endl;
              }} else {
                  OutSpect << "0" << endl;
                  TauSpect << "0" << endl;
                  if(outRef)RefSpect << "0" << endl;
+                 if(outRef)SigSpect << "0" << endl;
              }
            
            } //endif for PlotIt}
@@ -2195,6 +2282,7 @@ int main(int argc, char* argv[]){
            OutSpect.close();  
            TauSpect.close();    
            RefSpect.close();   
+           SigSpect.close(); 
          
          } //endif for outspec
 
@@ -2255,7 +2343,7 @@ int main(int argc, char* argv[]){
      }
 
 
-     delete[] lambda_resp; delete[] respval;
+     if(rfun){delete[] lambda_resp; delete[] respval;}
 
   return 0;
 }
