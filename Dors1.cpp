@@ -1984,8 +1984,8 @@ int main(int argc, char* argv[]){
 
                   if(outRef)SpectrumDeltaN[ISpect[leftwaves-1-j]]=SpectrumDeltaN[ISpect[leftwaves-1-j]]
                            +(currentnu0-SpectrumWaves[ISpect[leftwaves-1-j]])
-                           /SpectrumWaves[ISpect[leftwaves-1-j]]/alphaL
-                           *(KVEC[j]/alphaD)*strengthlines[l]/twopi;
+                           /SpectrumWaves[ISpect[leftwaves-1-j]]
+                           *(KVEC[j]/alphaD)*strengthlines[l]/(alphaL*twopi);
 
             /*      cout << setprecision(11) << XVEC[j] << " K= " << KVEC[j] << " Left-1-j  "
                        << leftwaves-1-j << "  ISpect=" << ISpect[leftwaves-1-j] << "  "
@@ -1997,8 +1997,8 @@ int main(int argc, char* argv[]){
 
                    if(outRef)SpectrumDeltaN[ISpect[j]]=SpectrumDeltaN[ISpect[j]]
                            +(currentnu0-SpectrumWaves[ISpect[j]])
-                           /SpectrumWaves[ISpect[j]]/alphaL
-                           *(KVEC[j]/alphaD)*strengthlines[l]/twopi;
+                           /SpectrumWaves[ISpect[j]]
+                           *(KVEC[j]/alphaD)*strengthlines[l]/(alphaL*twopi);
               } 
 
               //cout << currentnu0 << "  " << wavenumlines[l] << "  " << leftwaves << "  " << rightwaves << endl;
@@ -2066,7 +2066,7 @@ int main(int argc, char* argv[]){
 
          string modstring;
          modstring=oss_outcode.str();
-         cout << modstring << endl;
+//         cout << modstring << endl;
 
          int stringsize,ipos;
          stringsize=SpectFile.size();
@@ -2075,10 +2075,12 @@ int main(int argc, char* argv[]){
          SpectFileT.insert(ipos,modstring);
          SpectFileN.insert(ipos,modstring);
          SpectFileS.insert(ipos,modstring);
+/*
          cout << SpectFile << "  " << nlay << "  "  << k << endl;  
          cout << SpectFileT << "  " << nlay << "  "  << k << endl;  
          cout << SpectFileN << "  " << nlay << "  "  << k << endl;  
          cout << SpectFileS << "  " << nlay << "  "  << k << endl;  
+*/
 
          if(firstwrite){
            int Status=-1000;
@@ -2164,6 +2166,7 @@ int main(int argc, char* argv[]){
          double xwave;  //wavelength
 
 
+         double alphapolar;
 
          if(logplot){
 
@@ -2179,10 +2182,10 @@ int main(int argc, char* argv[]){
 
                   xwave=1./SpectrumWaves[i]; //wavelength in cm (cgs)
 
-                  sigmatau=SpectrumDeltaN[i]/2.0/pi/molspercm3;
-                           //so far we have (n^2-1)/2 pi N = atomic polarisability of 1 molecule
+                  alphapolar=SpectrumDeltaN[i]/2.0/pi/molspercm3;
+                           //so far we have (n^2-1)/4 pi N = atomic polarisability of 1 molecule
                            // next convert to scattering cross section in cm^2 per molecule
-                  sigmatau=sigmatau*sigmatau*128*pow(pi,5.0)/
+                  sigmatau=alphapolar*alphapolar*128*pow(pi,5.0)/
                            (3.0*pow(xwave,4.0));
                           //now convert to  scattering cross section for 1cm^3 of gas
                   sigmatau=sigmatau*molspercm3;
@@ -2229,7 +2232,7 @@ int main(int argc, char* argv[]){
            if(outRef){
            for(int i=0; i<isize; i++){
           //    if(fabs(SpectrumDeltaN[i])<2e-13){
-              RefSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << Speedlight*SpectrumDeltaN[i] << endl;
+              RefSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << SpectrumDeltaN[i] << endl;
           //    }
            }}
 
@@ -2357,6 +2360,8 @@ int main(int argc, char* argv[]){
 
 
      if(rfun){delete[] lambda_resp; delete[] respval;}
+
+
 
   return 0;
 }
