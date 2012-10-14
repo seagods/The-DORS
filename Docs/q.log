@@ -1,7 +1,7 @@
-This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6) (format=latex 2011.12.29)  30 JUL 2012 16:55
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6) (format=latex 2011.12.29)  27 SEP 2012 14:58
 entering extended mode
  %&-line parsing enabled.
-**KramKron
+**LineShape
 (/usr/share/texmf/tex/latex/tools/q.tex
 LaTeX2e <2005/12/01>
 Babel <v3.8h> and hyphenation patterns for english, usenglishmax, dumylang, noh
@@ -14,17 +14,17 @@ turkish, ukenglish, ukrainian, loaded.
 File ignored
 )
 ! Emergency stop.
-<*> KramKron
-            
+<*> LineShape
+             
 *** (job aborted, no legal \end found)
 
  
 Here is how much of TeX's memory you used:
  7 strings out of 256217
- 220 string characters out of 1917094
+ 221 string characters out of 1917094
  48804 words of memory out of 1500000
  3390 multiletter control sequences out of 10000+200000
  3640 words of font info for 14 fonts, out of 1200000 for 2000
  645 hyphenation exceptions out of 8191
- 5i,0n,1p,93b,8s stack positions out of 5000i,500n,6000p,200000b,15000s
+ 5i,0n,1p,94b,8s stack positions out of 5000i,500n,6000p,200000b,15000s
 No pages of output.

@@ -34,6 +34,7 @@
 #include <vector>   // a bit like a souped up stack
 #include <sys/stat.h>  //POSIX stuff including file queries
 #include <new>   // use nothrow
+
 using namespace std;
 
 // fortran programs, use nm (name mangle) on object files and .so files
@@ -117,33 +118,36 @@ int main(int argc, char* argv[]){
   int nsplit1,nsplit2,nsplit3,nsplit4;    
   // boundary layer visibility , troposphere visiblility, wavelength1, wavelength2
   double visb, vist, lambda1, lambda2, lambdacut;
-  bool rfun;  //true if we are using myresp.dat or myrespX.dat as a response function file
-  bool vis;  //true if entered as visibility, false if entered as optical depth.
+  bool rfun=false;  //true if we are using myresp.dat or myrespX.dat as a response function file
+  bool vis=false;  //true if entered as visibility, false if entered as optical depth.
   // default atmosphere 1-6 or user defined
   int iatm;    //atmosphere ID
-  bool switchR;    //Switch Rayleigh scattering on/off
-  bool switchA;    //Switch aerosol scattering on/off
+  bool switchR=false;    //Switch Rayleigh scattering on/off
+  bool switchA=false;    //Switch aerosol scattering on/off
   int itypeu, itypes, itypet, itypeb;    //types for upper atmosphere, stratosphere, troposphere, bdry layer
   bool ocean=false, groundT=false, groundP=false;  //ocean or maritime, know ground temperature, know ground pressure
   int  ihumid;      // use default humid or user defined
   double  groundtemp, groundpress;  //values for ground pressure and temperature (negative if unknown)
-  bool cloud; // do we have clouds
-  bool aeroplane;  //do we want to simulate aeroplane remote sensing
+  bool cloud=false; // do we have clouds
+  bool aeroplane=false;  //do we want to simulate aeroplane remote sensing
   double heightplane;  //negative if no aeroplane
 
-  bool default_pause;   //use default stratopause, topopause etc
+  bool default_pause=true;   //use default stratopause, topopause etc
   double HG, HB, HT, HS, HU;  //height of ground, bdry layer, tropopause, stratosphere
   int ngauss_height, ngauss_correlkay;       //order of Gauss-Legendre quadrature height and cumulative distribution
-  bool calcspec, outspec;              //if false, don't bother with calculating the 
+  bool calcspec=false, outspec=false;              //if false, don't bother with calculating the 
   double nu_cut; int icutL, icutD, istep;   //wave number cutoffs and spectral resolution
   const char* ReadInput;      //name of input file
   const char* RespFile;       //name of response function file
 
 
-  bool PlotIt; //if we are using PlotIt need to format the output for this plotting routine
-  bool logplot; //if we are outputing the log of the cross section
-  bool calcRef; //calculate refractive index spectrum
-  bool outRef;  // output refractive spectrum files
+  bool PlotIt=false; //if we are using PlotIt need to format the output for this plotting routine
+  bool logplot=false; //if we are outputing the log of the cross section
+  bool calcRef=false; //calculate refractive index spectrum
+  bool outRef=false;  // output refractive spectrum files
+
+  double mydoublezero=0.0;
+  int myintzero=0;
   
 
    // First off we read in the user input, whether 
@@ -227,7 +231,11 @@ int main(int argc, char* argv[]){
         cout << "Wavelengths used are " << lambda1 << " and " << lambda2 << endl;
     }
 
-/*   NAUGHTY STUFF   --- Hacks to do one off stuff and/or over-ride Questioner */
+/*   NAUGHTY STUFF   --- Hacks to do one-off stuff and/or over-ride Questioner */
+
+/*   NAUGHTY STEP, NAUGHTY stuff waits here until I make it nice  */
+
+     ofstream teststuff;
 
      bool verbose_out=true;  // output loads of info to standard output
      bool verbose_height=true;   //output height integration info to std::out
@@ -244,6 +252,9 @@ int main(int argc, char* argv[]){
      int ichap=5;  // 5 temperature files for Chappuis
 
      int iozHH=6;  // 5 temperature sets for Ozone HH
+                   // or 6 if we use HITRAN
+
+     teststuff.open("OzTest.dat",ios::out);
 
      int iHHdata=581; //581 data points in ozone HH files
 
@@ -255,13 +266,15 @@ int main(int argc, char* argv[]){
      HHTemp[4]=280.0; HHTemp[5]=300.0;
 
 
-     double ChapTemp[5]; //Temperatures for Chappuis Bands
+     double ChapTemp[5]; //Temperatures for Chappuis Bands (Note these actually include HH as well!)
      ChapTemp[0]=218.0; ChapTemp[1]=228.0; ChapTemp[2]=243.0; ChapTemp[3]=273.0;
      ChapTemp[4]=295.0;
 
      double startXChap[5];  //Lowest wave number in each Chappuis file
      startXChap[0]=15384.379; startXChap[1]=19230.399; startXChap[2]=19267.451; 
      startXChap[3]=19230.399; startXChap[4]=12048.193; 
+     double stopXChap[5];
+     stopXChap[0]=51413.0; stopXChap[1]=51413.0; stopXChap[2]=51417.0; stopXChap[3]=33388.0; stopXChap[4]=51282.0;
 
      vector<double> OzWavesHH; vector<double> OzXHH[6];  //Huggins and Hartley Ozone bands, 6 spectra
      vector<double> OzWavesChap[5]; vector<double> OzXChap[5];  //Huggins and Hartley Ozone bands, 6 spectra
@@ -476,7 +489,9 @@ int main(int argc, char* argv[]){
       for(int iso=0; iso<nice[imol];iso++){
          fp_in >>  nicecode[imol][iso] >> niceabund[imol][iso] >> QTref[imol][iso]
                >> geejay[imol][iso] >> AllMolW[imol][iso];
-         if(verbose_spect)cout << imol+1 << " " << nice[imol] << "  " << nicecode[imol][iso] << "  " << AllMolW[imol][iso] << endl;
+         if(verbose_spect)cout << imol+1 << " " << nice[imol] 
+                               << "  " << nicecode[imol][iso] << "  " 
+                               << AllMolW[imol][iso] << endl;
       }
       if(!getline(fp_in,line1)){ break;}
        // << "  getline return\n";
@@ -1248,8 +1263,17 @@ int main(int argc, char* argv[]){
           
           iss[3].str(entry[3]);
           iss[3] >> S_intense;
+
+          if(S_intense<1.0e-33){   
+                //NAUGHTY, we just reject any line intensity than this
+                // Wild -but NO2 par file has 1e-87 linestrengths!
+                // reject line and take back line centre
+                linecentres[Iso-1].pop_back(); 
+          }
+          else{  //accept line
+
           linestrengths[Iso-1].push_back(S_intense/rootpi);  //rootpi from HUMLIK
-          if(verbose_spect)cout << "S_intense="  << S_intense<< endl;
+          if(verbose_spect)cout << "S_intense="  << S_intense<< endl;      
 
           // pick out the maximum line strength for each isotopologue
           // and its index
@@ -1288,6 +1312,8 @@ int main(int argc, char* argv[]){
           iss[9] >> Press_shift;
           lineShift[Iso-1].push_back(Press_shift);
           if(verbose_spect)cout << "Press_shift="  << Press_shift << endl;
+
+
 
           // entry[10]=Upper state global parse according to classes 1 to 10 Table 3 HITRAN 2004
           // entry[11]=Lower state global parse according to classes 1 to 10 Table 3 HITRAN 2004
@@ -1330,6 +1356,9 @@ int main(int argc, char* argv[]){
           iss[17].str(entry[17]); iss[17] >> gp;   iss[18].str(entry[18]); iss[18] >> gpp;
    //       cout << "gp and gpp (stat weights upper and lower) are " << gp << " and "<< gpp << endl;
    //
+          }  //NAUGHTY end accept line, now clear all 19 input string streams
+
+
           iss[0].clear();iss[0].clear();iss[3].clear();iss[4].clear();
           iss[0].clear();iss[5].clear();iss[6].clear();iss[7].clear();iss[8].clear();iss[9].clear();
           iss[10].clear();iss[11].clear();iss[12].clear();iss[13].clear();iss[14].clear();iss[15].clear();
@@ -1356,14 +1385,18 @@ int main(int argc, char* argv[]){
              cout <<"nu1="  << nu1 << " nu2=" << nu2 <<endl;
 
 //**************************** Now for X section files  *****************************************************/
+//
+//                  Cross Section Files For Continuum Absorption
+//
+//************************************************************************************************************//
 
 
         if(molecule==3){
 
           double hello=-1.0; double goodbye=-1.0;
 
+//         startXHH now declared in NAUGHTY section - but just to remind me
 //         startXHH=29164.0 (343nm) and stopXHH=40798.0 (245nm) 
-
 
           if(nu1 <= startXHH  && nu2 > startXHH){
                hello=startXHH;
@@ -1378,13 +1411,11 @@ int main(int argc, char* argv[]){
 
           if(ozhh){
 
-
-
-          if(goodbye<0){cout << "Ozone UV gone wrong\n"; exit(0);}
+          if(goodbye<0){cout << "Ozone UV gone wrong\n"; return(11);} 
 
           fp_in.open("HITRAN/UV_X/O3-UV04.xsc", ios::in);
 
-          if(!fp_in.is_open()){ cerr << "Failed to open file O3-UV04,xsc"  << endl; exit(1); }
+          if(!fp_in.is_open()){ cerr << "Failed to open file O3-UV04,xsc"  << endl; return(11); }
 
 
 
@@ -1410,7 +1441,7 @@ int main(int argc, char* argv[]){
                   input_ozo >> OzoX;  input_ozo.clear();
                   if(hello <= OzW1 && OzW1<=goodbye){
                      if(ioz==0)OzWavesHH.push_back(OzW1);
-                     OzXHH[ioz].push_back(OzoX);                     
+                     OzXHH[ioz].push_back(OzoX);                  
                   }
                   OzW1+=2.0;
                 } //end idat loop
@@ -1424,7 +1455,7 @@ int main(int argc, char* argv[]){
                   input_ozo >> OzoX;  input_ozo.clear();
                   if(hello <= OzW1 && OzW1<=goodbye){
                      if(ioz==0)OzWavesHH.push_back(OzW1);
-                     OzXHH[ioz].push_back(OzoX);                     
+                     OzXHH[ioz].push_back(OzoX);               
                   }
                   OzW1+=2.0;
                 } //end idat loop for last line of 8
@@ -1444,7 +1475,7 @@ int main(int argc, char* argv[]){
          double stopXChap=startXHH; //Use the HITRAN data for high wavenumbers where possible
 
 
-/*   startXChap already declared and initiated as
+/*   startXChap already declared and initiated (See NAUGHTY) as
 
      startXChap[0]=15384.379; startXChap[1]=19230.399; startXChap[2]=19267.451; 
      startXChap[3]=19230.399; startXChap[4]=12048.193; 
@@ -1506,7 +1537,7 @@ int main(int argc, char* argv[]){
           }  //endif ozchap
 
 
-
+        //  ozhh=true; //NAUGHTY
           if(ozhh){
              cout <<"Molecule=3 OZONE HH\n";
              cout <<"startXHH=" << startXHH << "  stopXHH=" << stopXHH <<endl;
@@ -1532,7 +1563,8 @@ int main(int argc, char* argv[]){
       
           }
 
-          cout <<"Exit at at THIS LINE ARSE!\n";  exit(0);
+          //Dont use exit! (memory not freed unless you use return
+        //  cout <<"Exit at at THIS LINE ARSE!\n";  return(19);
 
           } // endif molecule=3
 
@@ -1544,7 +1576,6 @@ int main(int argc, char* argv[]){
         if(molecule==35){
           //Read in X-section for IR Chlorine Nitrate (ClONO2) if wavelength range requires it
           //wn ranges 750-830, 1260-1320, 1680-1790
-
         }
 
         if(molecule==42){
@@ -1644,7 +1675,8 @@ int main(int argc, char* argv[]){
               wavenumlines[l]=linecentres[k][l];
 
 
-           //   cout << "new centre at " << linecentres[k][l] <<  "  k and l " << k << "  " << l << endl; 
+            // cout << "new centre at " << linecentres[k][l] <<  "  k and l " << k << "  " << l << endl; 
+
               //This is a half width -- dont want it                
 //              alphaDop[l]=(wavenumlines[l]-lineShift[k][l]*PressNlay/RefPress)
 //                          /Speedlight*sqrt(2.0*Boltz*TempNlay*log2/(AllMolW[molek][k]*nucleon));
@@ -1663,7 +1695,7 @@ int main(int argc, char* argv[]){
               // Ref Paper, HITRAN 96 eqn.A.11 and A.12
               // Partial Pressure
               //
-              //    ARSE!
+              //    NAUGHTY!
               //
               //  We assume there is only air broadening for k>0
 
@@ -1701,6 +1733,7 @@ int main(int argc, char* argv[]){
               }
               //now we have the x and y vectors for all the lines
             }  //end loop over nlines
+
  
 /*******************************BEGIN STAGE 4B PROPER - WORK OUT SPECTRUMWAVES **********************/
             vector<double> SpectrumWaves; 
@@ -1727,6 +1760,9 @@ int main(int argc, char* argv[]){
             double midpoint;
 
             while(icurrent < nlines){  
+
+
+            cout << icurrent << "  " << nlines << endl;
               //we get some "double lines" -skip the next line if it it's the same nu0
               if(skipline){
                  skipline=false;
@@ -1886,13 +1922,14 @@ int main(int argc, char* argv[]){
 /*******************************BEGIN STAGE 4C  KAYWAVES *****************************/    
 
 
-           int templength=SpectrumWaves.size();
+           int waveslength=SpectrumWaves.size();
 
-           double myzero=0.0;
-           for(int l=0; l<templength-1; l++){
-              SpectrumKays.push_back(myzero);
-              SpectrumDeltaN.push_back(myzero);
+
+           for(int l=0; l<waveslength; l++){
+              SpectrumKays.push_back(mydoublezero);
+              SpectrumDeltaN.push_back(mydoublezero);
            }    
+
 
            double yfac;
            double   xtemp, width, alphaD, alphaL;
@@ -1976,35 +2013,42 @@ int main(int argc, char* argv[]){
               //calculate voigt profile
               humlik_(Nwaves, XVEC, yfac, KVEC);
 
-
+              int tempindex=-10;
 
               for(int j=0; j<leftwaves; j++){
-                  SpectrumKays[ISpect[leftwaves-1-j]]=SpectrumKays[ISpect[leftwaves-1-j]]
-                                                     +(KVEC[j]/alphaD)*strengthlines[l];
+                  tempindex=ISpect[leftwaves-1-j];
+                  if( (tempindex<0) || tempindex>=waveslength){
+                          cout << "tempindex out of bounds - error\n"; return(-10);
+                          }
+                  SpectrumKays[tempindex]=SpectrumKays[tempindex]+(KVEC[j]/alphaD)*strengthlines[l];
 
-                  if(outRef)SpectrumDeltaN[ISpect[leftwaves-1-j]]=SpectrumDeltaN[ISpect[leftwaves-1-j]]
-                           +(currentnu0-SpectrumWaves[ISpect[leftwaves-1-j]])
-                           /SpectrumWaves[ISpect[leftwaves-1-j]]
-                           *(KVEC[j]/alphaD)*strengthlines[l]/(alphaL*twopi);
+                  if(outRef)SpectrumDeltaN[tempindex]=SpectrumDeltaN[tempindex]
+                           +(currentnu0-SpectrumWaves[tempindex])
+                           /SpectrumWaves[tempindex]*(KVEC[j]/alphaD)*strengthlines[l]/(alphaL*twopi);
 
             /*      cout << setprecision(11) << XVEC[j] << " K= " << KVEC[j] << " Left-1-j  "
-                       << leftwaves-1-j << "  ISpect=" << ISpect[leftwaves-1-j] << "  "
+                       << leftwaves-1-j << "  ISpect=" << ISpect[tempindex] << "  "
                        << Xvector[j] <<  "  " << Xvector[0]  << "  " << l << endl; */
               }
 
              for(int j=leftwaves; j< Nwaves; j++){
-                   SpectrumKays[ISpect[j]]=SpectrumKays[ISpect[j]]+(KVEC[j]/alphaD)*strengthlines[l];
+                  tempindex=ISpect[j];
+                  if( (tempindex<0) || tempindex>=waveslength){
+                          cout << "tempindex out of bounds - error\n"; return(-10);
+                          }
+                   SpectrumKays[tempindex]=SpectrumKays[tempindex]+(KVEC[j]/alphaD)*strengthlines[l];
 
-                   if(outRef)SpectrumDeltaN[ISpect[j]]=SpectrumDeltaN[ISpect[j]]
-                           +(currentnu0-SpectrumWaves[ISpect[j]])
-                           /SpectrumWaves[ISpect[j]]
+                   if(outRef)SpectrumDeltaN[tempindex]=SpectrumDeltaN[tempindex]
+                           +(currentnu0-SpectrumWaves[tempindex])/SpectrumWaves[tempindex]
                            *(KVEC[j]/alphaD)*strengthlines[l]/(alphaL*twopi);
               } 
 
               //cout << currentnu0 << "  " << wavenumlines[l] << "  " << leftwaves << "  " << rightwaves << endl;
               delete[] XVEC; delete[]KVEC;
               Xvector.erase(Xvector.begin(), Xvector.end());
-              ISpect.erase(ISpect.begin(), ISpect.end());                 
+              ISpect.erase(ISpect.begin(), ISpect.end());   
+              Xvector.clear();
+              ISpect.clear();              
            }  //end for loop l<nulength over centre wavelengths
 
 
@@ -2088,15 +2132,21 @@ int main(int argc, char* argv[]){
            Status=stat(SpectFile.c_str(),&FileInfo);
            //returns 0 if successfully get File Infor, -1 if it fails to find the file
            if(Status==0){
-             cout << "File " << SpectFile << " already exists-We will not overwrite it or append to it!\n";
-             exit(0);}
+             cout << "File " << SpectFile << "exists already: Dors1 will not over-written previous calculation results\n";
+             cout << "remove or re-name previous results and run Dors1 again - exiting\n";
+             return(-20);   // "exit" does not call destructors or free memory - bad habbit
+                          // if you want to bomb out - better to use return instead
+              }
           } //endif firstwrite
 
          firstwrite=false;
          int kountzero=0;
-         int isize=SpectrumWaves.size();
+         int isize=-1; int isize2=-1;
 
-         int isize2;
+         isize=SpectrumWaves.size();
+
+         cout <<"isize=" << isize << "  waveslength=" << waveslength << endl;
+
 
          double molspercm2, molspercm3;
 
@@ -2116,9 +2166,9 @@ int main(int argc, char* argv[]){
          }
 
          if(logplot){
-         //strip out the zeros!
+         //strip out the zeros as far as output to log plot is concerned!
            for(int iz=0; iz < isize; iz++){
-              if(SpectrumKays[iz]<=0.0)kountzero++;
+              if(SpectrumKays[iz]<=mydoublezero)kountzero++;
          }}
          if(logplot){isize2=isize-kountzero;} else {isize2=isize;}
 
@@ -2166,16 +2216,20 @@ int main(int argc, char* argv[]){
          double xwave;  //wavelength
 
 
-         double alphapolar;
+         double alphapolar;  //atomic/molecular polarisability
+
 
          if(logplot){
 
             for(int i=0; i<isize; i++){
+           
               if(SpectrumKays[i]>0){
+
                   //remember spectrum kays has been multiplied by mass per cm^2/mass per molecule
                   //convert back to cm^2 per molecule for output
                   OutSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
                            << log10(SpectrumKays[i]/molspercm2) << endl;
+ 
                   TauSpect << setprecision(11) << SpectrumWaves[i] <<  "   " 
                            << log10(SpectrumKays[i])<< endl;
                   if(outRef){
@@ -2197,9 +2251,11 @@ int main(int argc, char* argv[]){
                            << log10(sigmatau) << endl;}
                  
                   }
-
               }  //endif  >0
+
              } //end for loop}
+        cout << "isize=" << isize << endl;
+
          }
          else{
            // not log plot
@@ -2212,10 +2268,10 @@ int main(int argc, char* argv[]){
 
                   xwave=1./SpectrumWaves[i]; //wavelength in cm (cgs)
 
-                  sigmatau=SpectrumDeltaN[i]/2.0/pi/molspercm3;
+                  alphapolar=SpectrumDeltaN[i]/2.0/pi/molspercm3;
                            //so far we have (n^2-1)/2 pi N = atomic polarisability of 1 molecule
                            // next convert to scattering cross section in cm^2 per molecule
-                  sigmatau=sigmatau*sigmatau*128*pow(pi,5.0)/
+                  sigmatau=alphapolar*alphapolar*128*pow(pi,5.0)/
                            (3.0*pow(xwave,4.0));
                           //now convert to  scattering cross section for 1cm^3 of gas
                   sigmatau=sigmatau*molspercm3;
@@ -2231,10 +2287,62 @@ int main(int argc, char* argv[]){
          //Ref index always has negatives, no log plot
            if(outRef){
            for(int i=0; i<isize; i++){
-          //    if(fabs(SpectrumDeltaN[i])<2e-13){
+        //      if(fabs(SpectrumDeltaN[i])<2e-13){
               RefSpect << setprecision(11) << SpectrumWaves[i] <<  "   " << SpectrumDeltaN[i] << endl;
-          //    }
+        //      }
            }}
+
+           if(outRef){
+                 double wn1, wn2; // wave numbers per MICRON! at start and finish
+                 double nstandard1, nstandard2;  // Edlen, standard air ref. ind.=1+nstandard
+                 double xwave1, xwave2; // wavelength in cm
+                 wn1=nu1/10000.0; wn2=nu2/10000.0;
+
+                 xwave1=1.0/nu1; xwave2=1.0/nu2;
+
+
+
+                 nstandard1=8342.13+2406030.0/(130.0-wn1*wn1)+15997.0/(38.9-wn1*wn1);
+                 nstandard2=8342.13+2406030.0/(130.0-wn2*wn2)+15997.0/(38.9-wn2*wn2);
+                 nstandard1=nstandard1/1.0e8;  nstandard2=nstandard2/1.0e8;
+
+                 cout << "Refractive index of standard air varies from n=1+" << nstandard1
+                       << " and  n=1+" << nstandard2 << "  across wavelength interval\n";
+
+                 double ENN0, alphaP1, alphaP2, sig1, sig2;
+                 double depol=0.029;
+                 //ENN0=number density of "air molecule" at ground
+                 ENN0=ENN[0]/1.0e6;   // convert to per cc
+              //   ENN0=ENN[0]; 
+                  alphaP1=nstandard1/2.0/pi/ENN0*(6.+3.0*depol)/(6.0-7.0*depol);   
+                  alphaP2=nstandard2/2.0/pi/ENN0*(6.+3.0*depol)/(6.0-7.0*depol);
+                   // depolarisation approx (see 6S)
+                           //so far we have (n^2-1)/4 pi N = atomic polarisability of 1 molecule
+                           //approx 2 Delta / 4 pi N
+                           // next convert to scattering cross section in cm^2 per molecule
+                  sig1=alphaP1*alphaP1*128*pow(pi,5.0)/(3.0*pow(xwave1,4.0));
+                  sig2=alphaP2*alphaP2*128*pow(pi,5.0)/(3.0*pow(xwave2,4.0));
+                          //now convert to  scattering cross section for 1cm path of air
+                  sig1=sig1*ENN0;
+                  sig2=sig2*ENN0;
+                          //now convert to  1km path of air
+                  sig1=sig1*1.0e5;
+                  sig2=sig2*1.0e5;
+
+
+
+                  cout <<"Xwaves are between "
+                       << xwave1 << "   and   " << xwave2 << endl;
+
+                  cout <<"alphaP  at ground level is between "
+                       << alphaP1 << "   and   " << alphaP2 << endl;
+
+                  cout <<"Rayleigh optical depth of 1km of air  at ground level is between "
+                       << sig1 << "   and   " << sig2 << endl;
+
+
+                 
+           }
 
 
            if(nlay==NLStop-1){
@@ -2287,6 +2395,8 @@ int main(int argc, char* argv[]){
                  TauSpect << "0" << endl;
                  if(outRef)RefSpect << "0" << endl;
                  if(outRef)SigSpect << "0" << endl;
+
+
              }
            
            } //endif for PlotIt}
@@ -2312,6 +2422,12 @@ int main(int argc, char* argv[]){
            SpectrumDeltaN.erase(SpectrumDeltaN.begin(), SpectrumDeltaN.end());
            CentreWaves.erase(CentreWaves.begin(), CentreWaves.end());
 
+           SpectrumWaves.clear();
+           SpectrumKays.clear();
+           SpectrumDeltaN.clear();
+           CentreWaves.clear();
+
+
            }  //end loop over layers nlay
 
 
@@ -2323,6 +2439,8 @@ int main(int argc, char* argv[]){
 /****************************************************************************************
         Clear memory
 ******************************************************************************************/
+
+
         for(int i=0;i<vecsize;i++){
             cout << "gas number=" << molecule << " Isotopologue=" << i+1 << "  code=" <<nicecode[molek][i]
                  << "  number of lines=" << linecentres[i].size()<< endl;
@@ -2332,8 +2450,19 @@ int main(int argc, char* argv[]){
                  linegammaSelf[i].erase(linegammaSelf[i].begin(), linegammaSelf[i].end());  
                  lineLSE[i].erase(lineLSE[i].begin(), lineLSE[i].end());       
                  lineTdep[i].erase(lineTdep[i].begin(), lineTdep[i].end());     
-                 lineShift[i].erase(lineShift[i].begin(), lineShift[i].end());            
+                 lineShift[i].erase(lineShift[i].begin(), lineShift[i].end());  
+
+                 linecentres[i].clear();    
+                 linestrengths[i].clear();  
+                 linegammaAir[i].clear();  
+                 linegammaSelf[i].clear();  
+                 lineLSE[i].clear();  
+                 lineTdep[i].clear();  
+                 lineShift[i].clear();  
+      
             }
+
+
 
           } // endif for UseParFile
 
@@ -2346,8 +2475,10 @@ int main(int argc, char* argv[]){
        cout << "The Value of ShiftLine was " << ShiftLine << endl;
      if(ozhh){
           OzWavesHH.erase( OzWavesHH.begin(), OzWavesHH.end() );
+          OzWavesHH.clear();
           for(int ioz=0; ioz <iozHH; ioz++){
              OzXHH[ioz].erase( OzXHH[ioz].begin(), OzXHH[ioz].end() );
+             OzXHH[ioz].clear();
           }
      }
      if(ozchap){
@@ -2355,12 +2486,13 @@ int main(int argc, char* argv[]){
           for(int ioz=0; ioz < ichap; ioz++){
              OzWavesChap[ioz].erase( OzWavesChap[ioz].begin(), OzWavesChap[ioz].end() );
              OzXChap[ioz].erase( OzXChap[ioz].begin(), OzXChap[ioz].end() );
+             OzXChap[ioz].clear();
+             OzWavesChap[ioz].clear();
           }
      }
 
 
      if(rfun){delete[] lambda_resp; delete[] respval;}
-
 
 
   return 0;
