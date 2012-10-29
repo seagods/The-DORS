@@ -18,7 +18,7 @@
 \numberwithin{equation}{section}
 \numberwithin{figure}{section}
 
-\bibliographystyle{prsty}
+\bibliographystyle{plain}
 
 \thispagestyle{empty}
 
@@ -2447,57 +2447,158 @@ CH3CN & Acetenitrile & $\sim 10^{-39}$ &   &   &   \\ \hline
 \end{center}
 \end{table}
 
+\newpage
 
 \section{Rayleigh Scattering and the Refractive Index of Air}
 
-Rayleigh scattering is the regime where the size of the scatterer is much less than the radiation
-being scattered, and so it applies to the scattering of ultra violet, visible, and longer wavelength
-radiation. The scattering coefficient $\sigma$ per particle is
+Rayleigh scattering is the regime where the size of the scatterer is much less than the wavelength of the radiation being scattered: and so it applies to the scattering of ultra violet, visible, and longer wavelength radiation from molecules. A more complex analysis is required for scattering from larger particles such as found in aerosols.
+
+The scattering coefficient $\sigma$ per particle is
 \begin{equation}
 \sigma=\frac{128 \pi^5}{3 \lambda^4} \alpha_p^2,
 \end{equation}
-where $\alpha_p$ is the polarisability. There are also
+where $\alpha_p$ is the atomic or molecular polarisability. There are also
  factors that describe depolarisation \cite{Chandrasekhar:Mybib}
- which we ignore here. Famously, the scattering coefficient follows the inverse fourth power
-of the wavelength: blue light will scatter far more red, and we have blue skies in the absense of
-cloud.
+ which we ignore for the moment. Famously, the scattering coefficient follows the inverse fourth power of the wavelength: blue light will scatter far more red, and we have blue skies in the absense of cloud.
 
 The polarisability is related to the
-refractive index, that is
+refractive index, that is if the refractive index $n$ is written $n=1+\Delta n$ where
+$\Delta n$ is small, 
 \begin{equation}
-\alpha_p=\frac{n^2-1}{ 4 \pi N} \sim \frac{\Delta n}{2 \pi N}.
+\alpha_p=\frac{n^2-1}{ 4 \pi N} \approx \frac{\Delta n}{2 \pi N}.
 \end{equation}
 Here $N$ is the number density. The difference between the refractive index and unity ($\Delta n)$ also
 depends on $N$. So, we need to know how $\Delta n$ varies with atmospheric conditions and wavelength.
 
 The early experimental results were summed up in Edl\'{e}n's formula of 1953
-\cite{Edlen1:Mybib} and are used by Penndorf \cite{PenndorfAir:Mybib} to characterise Rayleigh scattering in the
-Earth's Atmosphere. This contain's the ``old Edl\'{e}n" formula for ``standard air".
+\cite{Edlen1:Mybib} and are used by Penndorf \cite{PenndorfAir:Mybib} to characterise Rayleigh scattering in the Earth's Atmosphere. This contain's the ``old Edl\'{e}n" formula for ``standard air" at one atmosphere at 296K.
 \begin{equation}
 (n^2-1)\times 10^8=6432+\frac{2\>949\>810}{146-\lambda^{-2}}+\frac{25\>540}{41-\lambda^{-2}}.
 \end{equation}
 Here $\lambda$ is in microns.
-This early version still appears sometimes, and it gives good enough results for many purposes
- in the region of validity $0.2 \mu m < \lambda < 1.7 \mu m$. Nonetheless, the Edl\'{e}n revised the
-formula \cite{Edlen2:Mybib} and the 1966 formulation in eqn.X is better. That is
+This early version still appears in the literature sometimes, and it gives good enough results for many purposes
+ in the region of validity $0.2 \mu m < \lambda < 1.7 \mu m$. Nonetheless, Edl\'{e}n revised the formula \cite{Edlen2:Mybib} and the 1966 formulation is better. That is
 \begin{equation}
 (n^2-1)\times 10^8=8342.13+\frac{2\>046\>030}{130-\lambda^{-2}}+\frac{15\>997}{38.9-\lambda^{-2}}.
 \end{equation}
-Again, this is for ``standard air", by which is meant dry air at
-Adjustments are made for temperature, pressure, varying CO2, and water vapour.
+Again, this is for ``standard air", by which is meant dry air at one atmosphere at 296K. 
+Edl\'{e}n gives adjustments to Eqn.E4 to be made for temperature and pressure, alongside
+ varying CO2 and water vapour concentrations.
 
 Ignoring the region of validity, we remark that the  1953 formula tends to 27259.9
- as $\lambda \rightarrow \infty$,  and the 1966 formula tends to 27261.3. We do this so we can make some qualitative comments on
-this continuum variation of the refractive index of air. The
+ as $\lambda \rightarrow \infty$,  and the 1966 formula tends to 27261.3. The
 curve falls smoothly from $\Delta n \sim 3.2 \times 10^{-4}$
- at $\lambda=0.2 \mu m$, to $\sim 2.9 \times 10^{-4}$ at 0.3$\mu m$, to f$\sim 2.8 \times 10^{-4}$ at $\lambda=0.5 \mu m$. As for longer wavelenghths, $\Delta n \rightarrow \sim 2.74$. This could be thought of as representing the static dielectric constant or ``radio refractive index".
-The two terms depending on wavelength diverge for wavelengths in the region of $0.08 \mu$ and $0.16 \mu$ and can be thought of as representing the tail end of the refractive index contributions of dissociation in the ultra violet and X-Ray continuum region of the spectrum. No wavelengths smaller than 200$nm$ should be used.
+ at $\lambda=0.2 \mu m$, to $\sim 2.9 \times 10^{-4}$ at 0.3$\mu m$, to $\sim 2.8 \times 10^{-4}$ at $\lambda=0.5 \mu m$. As we have already seen, the value for longer wavelengths tends to $\sim 2.73 \times 10^{-4}$. This last value could be thought of as representing the static dielectric constant with an associated  ``radio refractive index".
+The two terms depending on wavelength diverge for wavelengths in the region of 
+$0.08 \mu m$ and $0.16 \mu m$ and so this refractive index curve can be thought of as representing the tail end of the refractive index contributions the ultra violet violet absorption edge in the spectrum of air via the Kramer's Kronig relations \cite{HallHeck:Mybib}. No wavelengths smaller than 0.2$\mu m$ should be used.
+
+The reader may ask, to what level of accuracy does the refractive index of air need to be known? Obviously, this is application dependent, but the two Edl\'{e}n papers
+give some idea of the answer even as long ago as the 1960's.
+
+When the difference between eqn.E.4 and E.3 is plotted, the change in $\Delta n$ varies between $\sim \pm 10^{-8}$.
+Though at first sight, this seems a negligible difference, many practical applications from astronomy to high precision distance measurement require the refractive index
+at this level of accuracy. It seem's that effects unknown to Edl\'{e}n mean that 
+ eqn.E4 is not accurate enough, and 
+better formula based on the latest measurement techniques are now available 
+  \cite{BirchDowns:Mybib} \cite{Ciddor:MyBib} \cite{CiddorHill:Mybib}.
+In particular we shall follow  B\"{o}nsch and Potulski \cite{Bonsch:Mybib}.
+
+The definition of standard air is now dry air at 15$^\circ C$ and 1013mb pressure, and 
+now with a CO2 concentration of 400$ppm$. B\"{o}nsch and Potulski give
+\begin{equation}
+\Delta n_N\times 10^{-8}=8092.33 + \frac{2\>333\>983}{130-\lambda^{-2}}
+   +\frac{15 \> 518}{38.9-\lambda^{-2}}.
+\end{equation}
+The subscript $N$ stands for ``New". A CO2 concentration of 400$ppm$ is
+a fraction 0f 0.0004, and if $x$ is the deviation from this value of
+ the CO2 concentation, the adjustment to the refractive index is from
+$\Delta n_N$ to $\Delta n_x$ where
+\begin{equation}
+\Delta n_x= \Delta n_N \times [1+0.5327 (x-0.0004) ].
+\end{equation}
+Then, if $t$ is the Celcius temperature, and $p$ is the pressure ($Pa$), the temperature and 
+pressure dependendent refractive index of dry air is given via
+\begin{equation}
+\Delta n_{tp}= \frac{ p \Delta n_x}{93\>214.60} \times
+ \frac{1+10^{-8}(0.5953+0.008\>876 t)p}{1+0.003\>6610 t}.
+\end{equation}
+The last thing to add in is the dependence on the amount of water vapour in the air.
+The refractive index is now $1+\Delta n_{ptf}$ and $f$ is the partial pressure of
+water vapour.
+\begin{equation}
+\Delta n_{ptf}-\Delta n_{pt}=-f \times \left ( A-\frac{B}{\lambda^2} \right ) \times 10^{-10}.
+\end{equation}
+Birch and Downs give values $A=3.7209$ and $B=0.0403$ \cite{BirchDowns:Mybib}. This
+gives us all we need to find the refractive index of air for any given atmospheric layer 
+in $The DORS$.
+
+From here, we need to go on to the Rayleigh optical depth. 
+The essential analysis is given by Chandrasekhar \cite{Chandrasekhar:Mybib}.
+Van der Hulst \cite{VanDeHulst:Mybib} follows Chandrasekhar except in 
+that he uses the Lorentz-Lorentz formula to take into account the dielectric effect
+of surrounding air molucules. At atmospheric pressure, the mean spacing of molecules
+ is only $\sim 3nm$ (much less than the wavelengths of radiation we shall consider). So, somewhat counter-intuitively, air is a ``dense dielectric", even at pressures as low as 1mb. However, in practice, since $\Delta n$ is small, the error in Chandrasekhar's ``vaccuum approach" is small (but important at the level of precision discussed in this appendix). At any rate, the Raighleigh scattering cross section per particle is
+\begin{equation}
+\sigma_R= \frac{24 \pi^2}{N^2 \lambda^4} \frac{(n^2-1)^2}{(n^2+2)^2}
+ \frac{6+3 \rho}{6-7 \rho}.
+\end{equation}
+$N$ is just the molecular number density.
+The important thing to note here is that $\rho$ is the depolarisation factor which
+arises from the fact that air molecules are not spherical top molecules and
+ therefore anisotropy will have an effect. So, what value do we need for $\rho$?
+In the following we shall put
+\begin{equation}
+F=\frac{6+3 \delta}{6-7 \delta}
+\end{equation}
+Chandrasekhar gives a value of $\rho=0.04$ for air, which is much higher than the value
+found in modern experiments.
+Fr\"olich and Shaw \cite{Frolly:Mybib} give $\delta=0.0095 \pm 0.004$ with
+a corresponding value of $F=1.016\pm0.0168$. They go on to give a details of how $\rho$ varies with atmospheric constituents. Later, Bates \cite{Bates:mybib} gave
+\begin{equation}
+F(N_2)=1.034+\frac{3.17 \times 10^{-4}}{\lambda^2},
+$$  $$
+F(O_2)=1.096+\frac{1.385 \times 10^{-3}}{\lambda^2}
++\frac{1.448 \times 10^{-4}}{\lambda^4},
+$$  and $$
+F(CO2)=1.15.
+\end{equation}
+We shall follow Bodhaine {\it et.al.} and use
+\begin{equation}
+F(air)=\frac{78.084 F(N_2)+20.946 F(O_2)+0.934+C_{CO_2} \times 1.15}
+            {78.04+20.946+0.934+C_{CO_2}}.
+\end{equation}
+In this last equation $C_{CO_2}$ is the concentration of $CO_2$ {\it as a percentage}, so
+that 400$ppm$ is 0.04.
+
+The last topic we mention is that of the scattering matrix.  Chandrasekhar \cite{Chandrasekhar:Mybib} defines a scattering matrix {\bf P} for Rayleigh scattering on page
+42 of his book, and discusses anisotropic scattering in \textsection 18.
+When anisotropy is considered, it is found that scattering matrix is modified to
+\begin{equation}
+\frac{1-\gamma}{1+2 \gamma} {\bf P}+\frac{3 \gamma}{2(1+2 \gamma)}
+\begin{pmatrix} 1 & 1 & 0 \\ 1 & 1 & 0 \\ 0 & 0 & 0  \end{pmatrix}.
+\end{equation}
+Here, $\gamma$ is related to to the anisotropic polarisability tensor, and in fact
+\begin{equation}
+\rho=\frac{2 \gamma}{1+2 \gamma}.
+\end{equation}
+We give more detail in the section on phase functions.
+
+So, was all this really necessary? Chandrasekhar, along with the 1966 Edl\'{e}n
+ formula and the newer value value of the depolarisation factor are probably good enough for our purposes. Nonetheless, since the author has reviewed the literature as far as he can under the circumstances, and since there is no real computational overhead, why not 
+use the more modern data and analysis? That completes all we need to say for on the matter here.
 
 
 
 
 
-\newpage
+
+
+
+
+
+
+
+
 
 \bibliography{/home/daddio/Articles/Mybib}
 

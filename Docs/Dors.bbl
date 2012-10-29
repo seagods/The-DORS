@@ -1,35 +1,46 @@
 \begin{thebibliography}{1}
 
+\bibitem{MTCKD:Mybib}
+S.~A. Clough, F.~X. Kneizys, and R.~W. Davies.
+\newblock Line shape and the water vapor continuum.
+\newblock {\em Atmos. Res.}, 23:229--241, 1989.
+
 \bibitem{RothmanETAL:Mybib}
 L.~S. Rothman, R.~R. Gamache, R.~H. Tipping, C.~P. Rinsland, M.~A. Smith, D.~C.
-  Benner, V.~M. Devi, J.~M. Flaud, C. Camy-Peyret, A. Perrin, A. Goldman, S.~T.
-  Massie, L.~R. Brown, and R.~A. Toth, Journal of Quantitative Spectroscopy and
-  Radiative Transfer {\bf 48},  469  (1992).
-
-\bibitem{RothmanETAL96:Mybib}
-L.~S. Rothman, C.~P. Rinsland, A. Goldman, S.~T. Massie, D.~P. Edwards, J.~M.
-  Flaud, A. Perrin, C. Camypeyret, V. Dana, J.~Y. Mandin, J. Schroeder, A.
-  Maccan, R.~R. Gamache, R.~B. Wattson, K. Yoshino, , K. .Chance, K.~W. Jucks,
-  L.~R. Brown, V. Nemtchinov, and P. Varanesi, Journal of Quantitative
-  Spectroscopy and Radiative Transfer {\bf 60},  665  (1998).
+  Benner, V.~M. Devi, J.~M. Flaud, C.~Camypeyret, A.~Perrin, A.~Goldman, S.~T.
+  Massie, L.~R. Brown, and R.~A. Toth.
+\newblock The hitran molecular database - editions of 1991 and 1992.
+\newblock {\em Journal of Quantitative Spectroscopy and Radiative Transfer},
+  48(5-6):469--507, 1992.
 
 \bibitem{RothmanETAL08:Mybib}
-L.~S. Rothman, I. Gordan, P.~F. Bernath, M.Birk, V. Bouden, L.~R. Brown, A.
-  Campargue, J.~P. Champion, K. Chance, L.~H. Couder, V. Dana, V.~M. Devi, S.
-  Fally, J.~M. Flaud, R.~R. Gamache, A. Goldman, D. Jaquemart, I.Kleiner, N.
-  Lacome, W.~J. Lafferty, J.~Y. Mandin, S.~T. Massie, S.~N. Mikhailenko, C.~E.
-  Miller, N. Moazzen-Ahmadi, O.~V. Normenko, A.~V. Nikitin, J. Orphal, V.~I.
-  Perevolov, A. Perrin, A.~P.-C. C.~P. Rinsland, M. Rotger, M. Simeckova,
-  M.~A.~H. Smith, K. Sung, S.~A. Tashkun, J. Tennyson, R.~A. Toth, A.~C.
-  Vandaele, J. Vander, and Auwera, Journal of Quantitative Spectroscopy and
-  Radiative Transfer {\bf 110},  533  (2009).
+L.~S. Rothman, I.~E. Gordon, A.~Barbe, Chris Benner, P.~F. Bernath, M.~Birk,
+  V.~Boudon, L.~R. Brown, A.~Campargue, J.~P. Champion, K.~Chance, L.H.
+  Coudert, V.~Dana, V.~M. Devi, S.~Fally, J.~M. Flaud, R.~R. Gamache,
+  A.~Goldman, D.~Jacquemart, I.~Kleiner, N.~Lacome, W.~J. Lafferty, J.~Y.
+  Mandin, S.~T. Massie, S.~N. Mikhailenko, C.E. Miller, N.~Moazzen-Ahmadi,
+  O.~V. Naumenko, A.~V. Nikitin, J.~Orphal, V.I.~Perevalov q, A.~Perrin,
+  A.~Predoi-Cross s, C.~P. Rinsland, M.~Rotger, M.~Simeckova, M.~A.~H. Smith,
+  K.~Sung, S.~A. Tashkun, J.~Tennyson, R.~A. Toth, A.~C. Vandaele, and
+  J.~Vander Auwera.
+\newblock The hitran 2008 molecular spectroscopic database.
+\newblock {\em Journal of Quantitative Spectroscopy and Radiative Transfer},
+  110:533--572, 2009.
 
-\bibitem{MTCKD:Mybib}
-S.~A. Clough, F.~X. Kneizys, and R.~W. Davies, Atmos. Res. {\bf 23},  229
-  (1989).
+\bibitem{RothmanETAL96:Mybib}
+L.~S. ROTHMAN, C.~P. RINSLAND, A.~GOLDMAN, MASSIE, D.~P. EDWARDS, J.~M. FLAUD,
+  A.~PERRIN, C.~CAMY-PEYRET, V.~DANA, J.-Y. MANDIN, J.~SCHROEDER, A.~MCCANN,
+  R.~R. GAMACHE, R.~B. WATTSON, K.~YOSHINO, K.~V. CHANCE, K.~W. JUCKS, L.~R.
+  BROWN, V.~NEMTCHINOV, and P.~VARANASI.
+\newblock The hitran molecular spectroscopic database and hawks (hitran
+  atmospheric workstation): 1996 edition.
+\newblock {\em Journal of Quantitative Spectroscopy and Radiative Transfer},
+  60(5):665--710, 1998.
 
 \bibitem{BobWells:MyBib}
-R.~G. Wells, Rapid Approximation to the Voigt/Faddeeva Function and its
-  Derivatives {\bf 62},  29  (1999).
+R.~G. Wells.
+\newblock Rapid approximation to the voigt/faddeeva function and its
+  derivatives.
+\newblock {\em J. Q. S. R. T}, 62:29--48, 1999.
 
 \end{thebibliography}
